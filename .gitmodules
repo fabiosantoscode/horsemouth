@@ -1,0 +1,3 @@
+[submodule "ecma262"]
+	path = ecma262
+	url = ./ecma262
