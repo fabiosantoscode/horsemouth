@@ -202,78 +202,77 @@ it.only('can read the algo steps for a method', () => {
   const steps = [...alg.childNodes[0].childNodes] as HTMLElement[]
 
   expect(parseAlgorithmStep(steps[0])).toMatchInlineSnapshot(`
-[
-  (let [
-    "S",
-    lit this,
-  ]),
-]
-`)
-
-expect(parseAlgorithmStep(steps[1])).toMatchInlineSnapshot(`
-[
-  (call [
-    "RequireInternalSlot",
     [
-      S,
-      [[SetData]],
-    ],
-  ]),
-]
-`)
+      (let [
+        "S",
+        lit this,
+      ]),
+    ]
+  `)
 
-expect(parseAlgorithmStep(steps[2])).toMatchInlineSnapshot(`
-[
-  (let [
-    "entries",
-    (property-access [
-      S,
-      [[SetData]],
-    ]),
-  ]),
-]
-`)
+  expect(parseAlgorithmStep(steps[1])).toMatchInlineSnapshot(`
+    [
+      (call [
+        "RequireInternalSlot",
+        [
+          S,
+          [[SetData]],
+        ],
+      ]),
+    ]
+    `)
 
-expect(parseAlgorithmStep(steps[3])).toMatchInlineSnapshot(`
-[
-  (for [
-    "e",
-    entries,
-    (do [
-      [
-        (condition [
-          (and [
-            (comparison [
-              e,
-              (negation [
-                lit empty,
-              ]),
-            ]),
-            (comparison [
-              (call [
-                "SameValueZero",
-                [
+  expect(parseAlgorithmStep(steps[2])).toMatchInlineSnapshot(`
+    [
+      (let [
+        "entries",
+        (property-access [
+          S,
+          [[SetData]],
+        ]),
+      ]),
+    ]
+    `)
+
+  expect(parseAlgorithmStep(steps[3])).toMatchInlineSnapshot(`
+    [
+      (for [
+        "e",
+        entries,
+        (do [
+          [
+            (condition [
+              (and [
+                (comparison [
                   e,
-                  value,
+                  (negation [
+                    lit empty,
+                  ]),
+                ]),
+                (comparison [
+                  (call [
+                    "SameValueZero",
+                    [
+                      e,
+                      value,
+                    ],
+                  ]),
+                  lit true,
+                ]),
+              ]),
+              (do [
+                [
+                  (return [
+                    S,
+                  ]),
                 ],
               ]),
-              lit true,
+              undefined,
             ]),
-          ]),
-          (do [
-            [
-              (return [
-                S,
-              ]),
-            ],
-          ]),
-          undefined,
+          ],
         ]),
-      ],
-    ]),
-  ]),
-]
-`)
-
+      ]),
+    ]
+    `)
 
 })

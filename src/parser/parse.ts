@@ -89,7 +89,6 @@ function parseAlgorithmStepTokens(tokens: GenericToken[]): Algorithm{
       if (tokens[i].type === 'identifier' && things[i] === ':' + tokens[i].value) {
         return true
       }
-      if(!tokens[i].value) console.log(tokens[i], i)
       if (things[i].toLowerCase() === tokens[i].value.toLowerCase!() && tokens[i].type === 'word') {
         return true
       }
@@ -162,7 +161,6 @@ function parseAlgorithmStepTokens(tokens: GenericToken[]): Algorithm{
 
         let elsee: AlgorithmNode | undefined = undefined
         if (!ended()) {
-          console.log('xxxx', tokens)
           elsee = parseExpression()
         }
         return { ast: 'condition', children: [condition, then, elsee] }
@@ -289,7 +287,6 @@ function parseAlgorithmStepTokens(tokens: GenericToken[]): Algorithm{
     }
 
     const base = beforeSuffix()
-    console.log({base})
     if (base && tryConsume('is', ':value')) {
       next()
       return { ast: 'comparison', children: [base, parseAtom()] }
