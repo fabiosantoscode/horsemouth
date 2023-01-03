@@ -1,59 +1,74 @@
 import { readFileSync } from "fs"
 import { HTMLElement, parseHTML } from "linkedom"
-import { inspect } from "util"
+import { Parser } from "nearley"
 import '../experiments'
 import { findAlgorithms } from "../html-parsing/findAlgorithms"
-import { tokenizeNodes } from "../parse-tools/tokenizeNodes"
-import { algorithmTokenizer, parseAlgorithmStep } from "./parse"
+import { parseAlgorithmStep } from "./parse"
 
 
 const { document } = parseHTML(readFileSync(__dirname + '/../test-sections/keyed-collections.html', 'utf8')
 )
 
-it('can read the algo steps for a constructor', () => {
-  const algorithms = findAlgorithms(document.querySelectorAll('#sec-set-objects emu-clause'))
+import Grammar from './grammar'
+import { algorithmEnhancedTokenizer } from "./tokenizer"
 
 
-  const alg = algorithms[0].algorithm
-  const steps = [...alg.childNodes[0].childNodes]
+const algorithms = findAlgorithms(document.querySelectorAll('#sec-set-objects emu-clause'))
 
+const alg = algorithms[0].algorithm
+const steps = [...alg.childNodes[0].childNodes]
+
+it.only('xx using grammar', () => {
   // if `newtarget` is undefined, throw a TypeError exception
-  expect(parseAlgorithmStep(steps[0])).toMatchInlineSnapshot(`
-[
-  (condition [
-    (comparison [
-      NewTarget,
-      lit undefined,
-    ]),
-    (throw [
-      lit TypeError,
-    ]),
-    undefined,
-  ]),
-]
-`)
+  console.log(new Parser(Grammar, {
+    lexer: algorithmEnhancedTokenizer
+  }).feed([steps[0]]).finish())
+})
 
-  // let "set" be ? OrdinaryCreateFromConstructor(newtarget, "%SetPrototype%", « [[SetData]] »)
-  expect(parseAlgorithmStep(steps[1])).toMatchInlineSnapshot(`
-[
-  (let [
-    "set",
-    (call [
-      "OrdinaryCreateFromConstructor",
-      [
-        NewTarget,
-        lit "%Set.prototype%",
-        (list [
-          [[SetData]],
+return
+
+describe('can read the algo steps for a constructor', () => {
+  it('if newtarget is undefined, throw a TypeError exception', () => {
+    expect(parseAlgorithmStep(steps[0])).toMatchInlineSnapshot(`
+    [
+      (condition [
+        (comparison [
+          NewTarget,
+          lit undefined,
         ]),
-      ],
-    ]),
-  ]),
-]
-`)
+        (throw [
+          lit TypeError,
+        ]),
+        undefined,
+      ]),
+    ]
+  `)
+  })
+
+  it('let set be ? OrdinaryCreateFromConstructor(NewTarget, "%SetPrototype%", « [[SetData]] »)', () => {
+    // let "set" be ? OrdinaryCreateFromConstructor(newtarget, "%SetPrototype%", « [[SetData]] »)
+    expect(parseAlgorithmStep(steps[1])).toMatchInlineSnapshot(`
+    [
+      (let [
+        "set",
+        (call [
+          "OrdinaryCreateFromConstructor",
+          [
+            NewTarget,
+            lit "%Set.prototype%",
+            (list [
+              [[SetData]],
+            ]),
+          ],
+        ]),
+      ]),
+    ]
+  `)
+  })
 
   // set set.[[SetData]] = new Set()
-  expect(parseAlgorithmStep(steps[2])).toMatchInlineSnapshot(`
+  it('set set.[[SetData]] = new Set()', () => {
+    expect(parseAlgorithmStep(steps[2])).toMatchInlineSnapshot(`
 [
   (setProperty [
     "set",
@@ -62,8 +77,10 @@ it('can read the algo steps for a constructor', () => {
   ]),
 ]
 `)
+  })
 
-  expect(parseAlgorithmStep(steps[3])).toMatchInlineSnapshot(`
+  it('if iterable is either undefined or null, return set', () => {
+    expect(parseAlgorithmStep(steps[3])).toMatchInlineSnapshot(`
 [
   (condition [
     (or [
@@ -83,8 +100,10 @@ it('can read the algo steps for a constructor', () => {
   ]),
 ]
 `)
+  })
 
-  expect(parseAlgorithmStep(steps[4])).toMatchInlineSnapshot(`
+  it('let adder be ? Get(set, "add")', () => {
+    expect(parseAlgorithmStep(steps[4])).toMatchInlineSnapshot(`
 [
   (let [
     "adder",
@@ -98,8 +117,10 @@ it('can read the algo steps for a constructor', () => {
   ]),
 ]
 `)
+  })
 
-  expect(parseAlgorithmStep(steps[5])).toMatchInlineSnapshot(`
+  it('if IsCallable(adder) is false, throw a TypeError exception', () => {
+    expect(parseAlgorithmStep(steps[5])).toMatchInlineSnapshot(`
 [
   (condition [
     (comparison [
@@ -118,8 +139,10 @@ it('can read the algo steps for a constructor', () => {
   ]),
 ]
 `)
+  })
 
-  expect(parseAlgorithmStep(steps[6])).toMatchInlineSnapshot(`
+  it('let iteratorRecord be ? GetIterator(iterable)', () => {
+    expect(parseAlgorithmStep(steps[6])).toMatchInlineSnapshot(`
 [
   (let [
     "iteratorRecord",
@@ -132,76 +155,91 @@ it('can read the algo steps for a constructor', () => {
   ]),
 ]
 `)
+  })
 
-  expect(parseAlgorithmStep(steps[7])).toMatchInlineSnapshot(`
+  it('repeat, (add each item in iter to set)', () => {
+    expect(parseAlgorithmStep(steps[7])).toMatchInlineSnapshot(`
 [
   (repeat [
-    (let [
-      "next",
-      (call [
-        "IteratorStep",
-        [
-          iteratorRecord,
-        ],
-      ]),
-    ]),
-    (condition [
-      (comparison [
-        next,
-        lit false,
-      ]),
-      (return [
-        set,
-      ]),
-      undefined,
-    ]),
-    (let [
-      "nextValue",
-      (call [
-        "IteratorValue",
-        [
-          next,
-        ],
-      ]),
-    ]),
-    (let [
-      "status",
-      (call [
-        "Completion",
-        [
+    (do [
+      [
+        (let [
+          "next",
           (call [
-            "Call",
+            "IteratorStep",
             [
-              adder,
-              set,
-              (list [
-                nextValue,
+              iteratorRecord,
+            ],
+          ]),
+        ]),
+      ],
+      [
+        (condition [
+          (comparison [
+            next,
+            lit false,
+          ]),
+          (return [
+            set,
+          ]),
+          undefined,
+        ]),
+      ],
+      [
+        (let [
+          "nextValue",
+          (call [
+            "IteratorValue",
+            [
+              next,
+            ],
+          ]),
+        ]),
+      ],
+      [
+        (let [
+          "status",
+          (call [
+            "Completion",
+            [
+              (call [
+                "Call",
+                [
+                  adder,
+                  set,
+                  (list [
+                    nextValue,
+                  ]),
+                ],
               ]),
             ],
           ]),
-        ],
-      ]),
-    ]),
-    (call [
-      "IfAbruptCloseIterator",
+        ]),
+      ],
       [
-        status,
-        iteratorRecord,
+        (call [
+          "IfAbruptCloseIterator",
+          [
+            status,
+            iteratorRecord,
+          ],
+        ]),
       ],
     ]),
   ]),
 ]
 `)
+  })
 })
 
-it.only('can read the algo steps for a method', () => {
+describe('can read the algo steps for a method', () => {
   const algorithms = findAlgorithms(document.querySelectorAll('[id="sec-set.prototype.add"]'))
-
 
   const alg = algorithms[0].algorithm
   const steps = [...alg.childNodes[0].childNodes] as HTMLElement[]
 
-  expect(parseAlgorithmStep(steps[0])).toMatchInlineSnapshot(`
+  it('let S be the this value', () => {
+    expect(parseAlgorithmStep(steps[0])).toMatchInlineSnapshot(`
     [
       (let [
         "S",
@@ -209,8 +247,10 @@ it.only('can read the algo steps for a method', () => {
       ]),
     ]
   `)
+  })
 
-  expect(parseAlgorithmStep(steps[1])).toMatchInlineSnapshot(`
+  it('perform RequireInternalSlot(S, [[SetData]])', () => {
+    expect(parseAlgorithmStep(steps[1])).toMatchInlineSnapshot(`
     [
       (call [
         "RequireInternalSlot",
@@ -221,8 +261,10 @@ it.only('can read the algo steps for a method', () => {
       ]),
     ]
     `)
+  })
 
-  expect(parseAlgorithmStep(steps[2])).toMatchInlineSnapshot(`
+  it('let entries be the List that is the value of S.[[SetData]]', () => {
+    expect(parseAlgorithmStep(steps[2])).toMatchInlineSnapshot(`
     [
       (let [
         "entries",
@@ -233,8 +275,10 @@ it.only('can read the algo steps for a method', () => {
       ]),
     ]
     `)
+  })
 
-  expect(parseAlgorithmStep(steps[3])).toMatchInlineSnapshot(`
+  it('for each element e of entries, do ', () => {
+    expect(parseAlgorithmStep(steps[3])).toMatchInlineSnapshot(`
     [
       (for [
         "e",
@@ -274,5 +318,6 @@ it.only('can read the algo steps for a method', () => {
       ]),
     ]
     `)
+  })
 
 })

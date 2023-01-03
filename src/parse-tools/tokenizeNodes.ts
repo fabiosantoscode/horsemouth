@@ -21,6 +21,10 @@ export type TokenType =
   | 'lSquareBracket'
   | 'rSquareBracket'
   | 'questionMark'
+  // Splitting statements and do-expressions
+  | 'lDo'
+  | 'rDo'
+  | 'endStatement'
 
 export interface BasicToken {
   type: TokenType
@@ -116,13 +120,24 @@ export function tokenizeNodes({ tokenizer, nodes }: {
 
         return { type: 'supertoken', value: childTokenLists } as GenericToken
       }
+      case 'LI': {
+        return compactTokens([...node.childNodes].flatMap(tokenizeTextOrElement))
+      }
     }
     throw new Error('cannot tokenize node ' + node.outerHTML ?? node.textContent ?? node)
   }
 
   const tokens = [...nodes].flatMap(tokenizeTextOrElement)
 
-  return compactTokens(tokens).flatMap(emptify)
+  return compactTokens(tokens)
+    .flatMap(emptify)
+    .map(tok => {
+      return Object.defineProperty(
+        tok,
+        'text',
+        { enumerable: false, value: tok.value }
+      )
+    })
 }
 
 const emptify = (token: GenericToken) => {

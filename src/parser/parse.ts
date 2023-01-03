@@ -1,12 +1,11 @@
 import assert from "assert"
 import { HTMLElement, HTMLLIElement } from "linkedom"
-import moo from 'moo'
 import { inspect } from "util"
 import '../experiments'
 import { HTMLAlgorithm } from "../html-parsing/findAlgorithms"
 import { BasicToken, GenericToken, SuperToken, tokenizeNodes, TokenOfType, TokenType } from "../parse-tools/tokenizeNodes"
 import { getOnly } from "../utils/getOnly"
-
+import { algorithmTokenizer } from "./tokenizer"
 
 export type AlgorithmNode =
   | { ast: 'repeat'; children: AlgorithmNode[] }
@@ -30,22 +29,6 @@ export type AlgorithmNode =
   | { ast: 'property-access', children: [AlgorithmNode, AlgorithmNode] }
 
 export type Algorithm = AlgorithmNode[]
-
-export const algorithmTokenizer = moo.compile({
-  word: { match: /[a-zA-Z_$][a-zA-Z0-9_$]*/ },
-  space: /[ \xa0]+/,
-  comma: ',',
-  dot: '.',
-  questionMark: '?',
-  lParen: '(',
-  rParen: ')',
-  lSlotBrackets: '[[',
-  rSlotBrackets: ']]',
-  lSquareBracket: '[',
-  rSquareBracket: ']',
-  lList: '«',
-  rList: '»',
-})
 
 // Warning: `tokens` array is mutable
 function parseAlgorithmStepTokens(tokens: GenericToken[]): Algorithm{
@@ -137,7 +120,6 @@ function parseAlgorithmStepTokens(tokens: GenericToken[]): Algorithm{
       if (tryConsume('repeat', ':comma', ':supertoken')) {
         next()
         next()
-        const superTok = expect('supertoken')
 
         const children = [parseExpression()]
         return { ast: 'repeat', children }

@@ -1,5 +1,5 @@
 import { parseHTML } from "linkedom"
-import { algorithmTokenizer } from "../parser/parse"
+import { algorithmTokenizer } from "../parser/tokenizer"
 import { getOnly } from "../utils/getOnly"
 import { tokenizeNodes } from "./tokenizeNodes"
 
