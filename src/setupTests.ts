@@ -1,16 +1,11 @@
+import { prettyPrintAST } from "./parser-tools/prettyPrintAST"
+import { AlgorithmNode } from "./parser/parse"
 
 expect.addSnapshotSerializer({
   test: (val) => val && typeof val.ast === 'string' && Array.isArray(val.children),
-  print: (val, serialize) => {
-    if (val.ast === 'literal') {
-      return `lit ${(val.children[0])}`
-    }
-    if (val.ast === 'reference') {
-      return "" + val.children[0]
-    }
-    if (val.ast === 'slot') {
-      return `[[${(val.children[0])}]]`
-    }
-    return `(${val.ast} ${serialize(val.children)})`
+  print: (val, print, indent) => {
+    return prettyPrintAST(val as AlgorithmNode)
   }
 })
+
+export{}

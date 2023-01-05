@@ -9,7 +9,7 @@ export interface HTMLAlgorithm {
 
 export function findAlgorithms(clauses: HTMLElement | HTMLElement[]): HTMLAlgorithm[] {
   return [clauses].flat().flatMap(clause =>{
-  const algChildren = clause.children.filter(child => child.tagName === 'EMU-ALG')
+  const algChildren = [...clause.children].filter(child => child.tagName === 'EMU-ALG')
 
   assert(algChildren.length < 2, `more than one alg found in ${clause.id}`)
 

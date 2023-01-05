@@ -1,14 +1,20 @@
-import { HTMLElement } from "linkedom";
 import moo from "moo";
-import { flattenSupertokens } from "../parse-tools/flattenSupertokens";
-import { GenericToken, tokenizeNodes } from "../parse-tools/tokenizeNodes";
+import type { HorsemouthLexer } from "./tokenizerMooOverride";
 
-export const algorithmTokenizer = moo.compile({
-  word: { match: /[a-zA-Z_$][a-zA-Z0-9_$]*/ },
-  space: /[ \xa0]+/,
+const tokens = {
+  word: {
+    match: /[a-zA-Z_$][a-zA-Z0-9_$]*/,
+  } as moo.Rule,
+  space: {
+    match: /[ \n\xa0]+/,
+    lineBreaks: true,
+  },
   comma: ',',
   dot: '.',
-  questionMark: '?',
+  questionMark: /\?/,
+  percentReference: /"%[^%]+%"/,
+  string: /"[^"]+"/,
+  number: /\d+/,
   lParen: '(',
   rParen: ')',
   lSlotBrackets: '[[',
@@ -17,33 +23,20 @@ export const algorithmTokenizer = moo.compile({
   rSquareBracket: ']',
   lList: '«',
   rList: '»',
-})
+  innerBlockHack: {
+    match: /:::innerblockhack\d+/,
+    value: (s: string) => s.replace(':::innerblockhack',''),
+  } as moo.Rule
+}
 
-let enhancedTokens: GenericToken[] = []
-export const algorithmEnhancedTokenizer: moo.Lexer = Object.assign(Object.create(algorithmTokenizer), {
-  reset(chunk?: string | HTMLElement[]) {
-    if (typeof chunk === 'string' || !chunk) {
-      throw new Error('not implemented')
-    }
+export const getInnerBlockHack = (num: number) => `:::innerblockhack${num}`
 
-    enhancedTokens = flattenSupertokens(tokenizeNodes({
-      nodes: chunk,
-      tokenizer: algorithmTokenizer,
-    }))
-
-    return this
-  },
-  next() {
-    const token = enhancedTokens.shift()
-
-    if (!token) {
-      return null
-    }
-
-    return {
-      ...token,
-      value: token.value.toLowerCase(),
-      text: (token.text ?? token.value).toLowerCase()
-    }
-  }
-})
+export type TokenType = keyof typeof tokens
+export type TokenOfType<T extends TokenType> = moo.Token & { type: T }
+export const algorithmTokenizer = moo.compile(tokens) as HorsemouthLexer
+const _next = algorithmTokenizer.next
+algorithmTokenizer.next = () => {
+  const token = _next.call(algorithmTokenizer)
+  if (token?.type === 'space') return algorithmTokenizer.next()
+  return token
+}

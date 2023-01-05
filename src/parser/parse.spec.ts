@@ -1,323 +1,129 @@
-import { readFileSync } from "fs"
-import { HTMLElement, parseHTML } from "linkedom"
-import { Parser } from "nearley"
+import { parseHTML } from "linkedom"
 import '../experiments'
-import { findAlgorithms } from "../html-parsing/findAlgorithms"
-import { parseAlgorithmStep } from "./parse"
+import { parseAlgorithmStep, parseAlgorithm } from "./parse"
 
+const { document } = parseHTML(getSetConstructorSpecHtml())
 
-const { document } = parseHTML(readFileSync(__dirname + '/../test-sections/keyed-collections.html', 'utf8')
-)
+const alg = document.children[0]
 
-import Grammar from './grammar'
-import { algorithmEnhancedTokenizer } from "./tokenizer"
-
-
-const algorithms = findAlgorithms(document.querySelectorAll('#sec-set-objects emu-clause'))
-
-const alg = algorithms[0].algorithm
-const steps = [...alg.childNodes[0].childNodes]
-
-it.only('xx using grammar', () => {
+it('parse step using grammar', () => {
   // if `newtarget` is undefined, throw a TypeError exception
-  console.log(new Parser(Grammar, {
-    lexer: algorithmEnhancedTokenizer
-  }).feed([steps[0]]).finish())
+  expect(parseAlgorithmStep(alg.children[0].children[0])).toMatchInlineSnapshot(`(condition (<newtarget> equals <undefined>) (throw_ <typeerror>))`)
 })
 
-return
-
-describe('can read the algo steps for a constructor', () => {
-  it('if newtarget is undefined, throw a TypeError exception', () => {
-    expect(parseAlgorithmStep(steps[0])).toMatchInlineSnapshot(`
-    [
-      (condition [
-        (comparison [
-          NewTarget,
-          lit undefined,
-        ]),
-        (throw [
-          lit TypeError,
-        ]),
-        undefined,
-      ]),
-    ]
-  `)
-  })
-
-  it('let set be ? OrdinaryCreateFromConstructor(NewTarget, "%SetPrototype%", « [[SetData]] »)', () => {
-    // let "set" be ? OrdinaryCreateFromConstructor(newtarget, "%SetPrototype%", « [[SetData]] »)
-    expect(parseAlgorithmStep(steps[1])).toMatchInlineSnapshot(`
-    [
-      (let [
-        "set",
-        (call [
-          "OrdinaryCreateFromConstructor",
-          [
-            NewTarget,
-            lit "%Set.prototype%",
-            (list [
-              [[SetData]],
-            ]),
-          ],
-        ]),
-      ]),
-    ]
-  `)
-  })
-
-  // set set.[[SetData]] = new Set()
-  it('set set.[[SetData]] = new Set()', () => {
-    expect(parseAlgorithmStep(steps[2])).toMatchInlineSnapshot(`
+it('parse whole algo using grammar', () => {
+  // if `newtarget` is undefined, throw a TypeError exception
+  expect(parseAlgorithm(alg)).toMatchInlineSnapshot(`
 [
-  (setProperty [
-    "set",
-    [[SetData]],
-    (list []),
-  ]),
+  (condition (<newtarget> equals <undefined>) (throw_ <typeerror>)),
+  let set = (call <ordinarycreatefromconstructor> <newtarget> (percentReference set.prototype) (List [[setdata]])),
+  (set <set>.[[setdata]] (List )),
+  (condition ((<iterable> equals <undefined>) or (<iterable> equals <null>)) (return_ <set>)),
+  let adder = (call <get> <set> (string add)),
+  (condition ((call <iscallable> <adder>) equals <false>) (throw_ <typeerror>)),
+  let iteratorrecord = (call <getiterator> <iterable>),
+  repeat: [
+    block: [
+        let next = (call <iteratorstep> <iteratorrecord>)
+        (condition (<next> equals <false>) (return_ <set>))
+        let nextvalue = (call <iteratorvalue> <next>)
+        let status = (call <completion> (call <call> <adder> <set> (List <nextvalue>)))
+        (call <ifabruptcloseiterator> <status> <iteratorrecord>)
+      ]
+  ],
 ]
 `)
-  })
-
-  it('if iterable is either undefined or null, return set', () => {
-    expect(parseAlgorithmStep(steps[3])).toMatchInlineSnapshot(`
-[
-  (condition [
-    (or [
-      (comparison [
-        iterable,
-        lit undefined,
-      ]),
-      (comparison [
-        iterable,
-        lit null,
-      ]),
-    ]),
-    (return [
-      set,
-    ]),
-    undefined,
-  ]),
-]
-`)
-  })
-
-  it('let adder be ? Get(set, "add")', () => {
-    expect(parseAlgorithmStep(steps[4])).toMatchInlineSnapshot(`
-[
-  (let [
-    "adder",
-    (call [
-      "Get",
-      [
-        set,
-        lit "add",
-      ],
-    ]),
-  ]),
-]
-`)
-  })
-
-  it('if IsCallable(adder) is false, throw a TypeError exception', () => {
-    expect(parseAlgorithmStep(steps[5])).toMatchInlineSnapshot(`
-[
-  (condition [
-    (comparison [
-      (call [
-        "IsCallable",
-        [
-          adder,
-        ],
-      ]),
-      lit false,
-    ]),
-    (throw [
-      lit TypeError,
-    ]),
-    undefined,
-  ]),
-]
-`)
-  })
-
-  it('let iteratorRecord be ? GetIterator(iterable)', () => {
-    expect(parseAlgorithmStep(steps[6])).toMatchInlineSnapshot(`
-[
-  (let [
-    "iteratorRecord",
-    (call [
-      "GetIterator",
-      [
-        iterable,
-      ],
-    ]),
-  ]),
-]
-`)
-  })
-
-  it('repeat, (add each item in iter to set)', () => {
-    expect(parseAlgorithmStep(steps[7])).toMatchInlineSnapshot(`
-[
-  (repeat [
-    (do [
-      [
-        (let [
-          "next",
-          (call [
-            "IteratorStep",
-            [
-              iteratorRecord,
-            ],
-          ]),
-        ]),
-      ],
-      [
-        (condition [
-          (comparison [
-            next,
-            lit false,
-          ]),
-          (return [
-            set,
-          ]),
-          undefined,
-        ]),
-      ],
-      [
-        (let [
-          "nextValue",
-          (call [
-            "IteratorValue",
-            [
-              next,
-            ],
-          ]),
-        ]),
-      ],
-      [
-        (let [
-          "status",
-          (call [
-            "Completion",
-            [
-              (call [
-                "Call",
-                [
-                  adder,
-                  set,
-                  (list [
-                    nextValue,
-                  ]),
-                ],
-              ]),
-            ],
-          ]),
-        ]),
-      ],
-      [
-        (call [
-          "IfAbruptCloseIterator",
-          [
-            status,
-            iteratorRecord,
-          ],
-        ]),
-      ],
-    ]),
-  ]),
-]
-`)
-  })
 })
 
-describe('can read the algo steps for a method', () => {
-  const algorithms = findAlgorithms(document.querySelectorAll('[id="sec-set.prototype.add"]'))
-
-  const alg = algorithms[0].algorithm
-  const steps = [...alg.childNodes[0].childNodes] as HTMLElement[]
-
-  it('let S be the this value', () => {
-    expect(parseAlgorithmStep(steps[0])).toMatchInlineSnapshot(`
-    [
-      (let [
-        "S",
-        lit this,
-      ]),
-    ]
-  `)
-  })
-
-  it('perform RequireInternalSlot(S, [[SetData]])', () => {
-    expect(parseAlgorithmStep(steps[1])).toMatchInlineSnapshot(`
-    [
-      (call [
-        "RequireInternalSlot",
-        [
-          S,
-          [[SetData]],
-        ],
-      ]),
-    ]
-    `)
-  })
-
-  it('let entries be the List that is the value of S.[[SetData]]', () => {
-    expect(parseAlgorithmStep(steps[2])).toMatchInlineSnapshot(`
-    [
-      (let [
-        "entries",
-        (property-access [
-          S,
-          [[SetData]],
-        ]),
-      ]),
-    ]
-    `)
-  })
-
-  it('for each element e of entries, do ', () => {
-    expect(parseAlgorithmStep(steps[3])).toMatchInlineSnapshot(`
-    [
-      (for [
-        "e",
-        entries,
-        (do [
-          [
-            (condition [
-              (and [
-                (comparison [
-                  e,
-                  (negation [
-                    lit empty,
-                  ]),
-                ]),
-                (comparison [
-                  (call [
-                    "SameValueZero",
-                    [
-                      e,
-                      value,
-                    ],
-                  ]),
-                  lit true,
-                ]),
-              ]),
-              (do [
-                [
-                  (return [
-                    S,
-                  ]),
-                ],
-              ]),
-              undefined,
-            ]),
-          ],
-        ]),
-      ]),
-    ]
-    `)
-  })
-
+it('Weakset has', () => {
+  const { document } = parseHTML(getWeakSetHasSpecHtml())
+  const alg = document.children[0]
+  console.log(alg.textContent)
+  expect(parseAlgorithm(alg)).toMatchInlineSnapshot(`
+[
+  let s = <this>,
+  (call <requireinternalslot> <s> [[weaksetdata]]),
+  let entries = (typeCheck <list> <s>.[[weaksetdata]]),
+  (condition (not ((call <type> <value>) equals <object>)) (return_ <false>)),
+  (forEach e <entries> block: [
+    (condition ((not (<e> equals <empty>)) and ((call <samevalue> <e> <value>) equals <true>)) (return_ <true>))
+  ]),
+  (return_ <false>),
+]
+`)
 })
+
+function getSetConstructorSpecHtml() {
+  return `
+    <emu-alg>
+      <ol>
+        <li>If NewTarget is <emu-val>undefined</emu-val>, throw a <emu-val>TypeError</emu-val> exception. </li>
+        <li>Let <var>set</var> be ?&nbsp; <emu-xref aoid="OrdinaryCreateFromConstructor" id="_ref_11894">
+            <a href="#sec-ordinarycreatefromconstructor" class="e-user-code">OrdinaryCreateFromConstructor</a>
+          </emu-xref>(NewTarget, <emu-val>"%Set.prototype%"</emu-val>, « [[SetData]] »). </li>
+        <li>Set <var>set</var>.[[SetData]] to a new empty <emu-xref href="#sec-list-and-record-specification-type" id="_ref_11895">
+            <a href="#sec-list-and-record-specification-type">List</a>
+          </emu-xref>. </li>
+        <li>If <var>iterable</var> is either <emu-val>undefined</emu-val> or <emu-val>null</emu-val>, return <var>set</var>. </li>
+        <li>Let <var>adder</var> be ?&nbsp; <emu-xref aoid="Get" id="_ref_11896">
+            <a href="#sec-get-o-p" class="e-user-code">Get</a>
+          </emu-xref>( <var>set</var>, <emu-val>"add"</emu-val>). </li>
+        <li>If <emu-xref aoid="IsCallable" id="_ref_11897">
+            <a href="#sec-iscallable">IsCallable</a>
+          </emu-xref>( <var>adder</var>) is <emu-val>false</emu-val>, throw a <emu-val>TypeError</emu-val> exception. </li>
+        <li>Let <var>iteratorRecord</var> be ?&nbsp; <emu-xref aoid="GetIterator" id="_ref_11898">
+            <a href="#sec-getiterator" class="e-user-code">GetIterator</a>
+          </emu-xref>( <var>iterable</var>). </li>
+        <li>Repeat,
+          <ol>
+            <li>Let <var>next</var> be ?&nbsp; <emu-xref aoid="IteratorStep" id="_ref_11899">
+                <a href="#sec-iteratorstep" class="e-user-code">IteratorStep</a>
+              </emu-xref>( <var>iteratorRecord</var>). </li>
+            <li>If <var>next</var> is <emu-val>false</emu-val>, return <var>set</var>. </li>
+            <li>Let <var>nextValue</var> be ?&nbsp; <emu-xref aoid="IteratorValue" id="_ref_11900">
+                <a href="#sec-iteratorvalue" class="e-user-code">IteratorValue</a>
+              </emu-xref>( <var>next</var>). </li>
+            <li>Let <var>status</var> be <emu-xref aoid="Completion" id="_ref_11901">
+                <a href="#sec-completion-ao">Completion</a>
+              </emu-xref>( <emu-xref aoid="Call" id="_ref_11902">
+                <a href="#sec-call" class="e-user-code">Call</a>
+              </emu-xref>( <var>adder</var>, <var>set</var>, « <var>nextValue</var> »)). </li>
+            <li>
+              <emu-xref aoid="IfAbruptCloseIterator" id="_ref_11903">
+                <a href="#sec-ifabruptcloseiterator" class="e-user-code">IfAbruptCloseIterator</a>
+              </emu-xref>( <var>status</var>, <var>iteratorRecord</var>).
+            </li>
+          </ol>
+        </li>
+      </ol>
+    </emu-alg>
+  `
+}
+
+function getWeakSetHasSpecHtml() {
+  return `
+    <emu-alg>
+      <ol>
+        <li>Let <var>S</var> be the <emu-val>this</emu-val> value. </li>
+        <li>Perform ?&nbsp; <emu-xref aoid="RequireInternalSlot" id="_ref_12035">
+            <a href="#sec-requireinternalslot">RequireInternalSlot</a>
+          </emu-xref>( <var>S</var>, [[WeakSetData]]). </li>
+        <li>Let <var>entries</var> be the <emu-xref href="#sec-list-and-record-specification-type" id="_ref_12036">
+            <a href="#sec-list-and-record-specification-type">List</a>
+          </emu-xref> that is <var>S</var>.[[WeakSetData]]. </li>
+        <li>If <emu-xref aoid="Type" id="_ref_12037">
+            <a href="#sec-ecmascript-data-types-and-values">Type</a>
+          </emu-xref>( <var>value</var>) is not Object, return <emu-val>false</emu-val>. </li>
+        <li>For each element <var>e</var> of <var>entries</var>, do
+          <ol>
+            <li>If <var>e</var> is not <emu-const>empty</emu-const> and <emu-xref aoid="SameValue" id="_ref_12038">
+                <a href="#sec-samevalue">SameValue</a>
+              </emu-xref>( <var>e</var>, <var>value</var>) is <emu-val>true</emu-val>, return <emu-val>true</emu-val>.
+            </li>
+          </ol>
+        </li>
+        <li>Return <emu-val>false</emu-val>. </li>
+      </ol>
+    </emu-alg>
+  `
+}

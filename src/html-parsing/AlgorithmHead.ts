@@ -27,7 +27,6 @@ export function getAlgorithmHead({ section }: HTMLAlgorithm): AlgorithmUsage {
     rSquareBracket: ']',
   })
 
-
   section.querySelector('.secnum').remove()
 
   const headTokens: GenericToken[] = tokenizeNodes({ tokenizer, nodes: section.querySelector('h1').childNodes })

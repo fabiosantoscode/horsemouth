@@ -3,12 +3,14 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
 
-
   globals: {
     'ts-jest': {
       diagnostics: false
     }
   },
+
+  roots: ['<rootDir>/src'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node', 'html', 'ne', 'json'],
   // All imported modules in your tests should be mocked automatically
   // automock: false,
 

@@ -1,316 +1,159 @@
 import assert from "assert"
-import { HTMLElement, HTMLLIElement } from "linkedom"
-import { inspect } from "util"
+import { HTMLElement, HTMLLIElement, HTMLOListElement } from "linkedom"
 import '../experiments'
+import {algorithmTokenizer, getInnerBlockHack} from './tokenizer';
+
+import Grammar from './grammar'
+import { Parser } from "nearley"
 import { HTMLAlgorithm } from "../html-parsing/findAlgorithms"
-import { BasicToken, GenericToken, SuperToken, tokenizeNodes, TokenOfType, TokenType } from "../parse-tools/tokenizeNodes"
-import { getOnly } from "../utils/getOnly"
-import { algorithmTokenizer } from "./tokenizer"
+import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
 
 export type AlgorithmNode =
-  | { ast: 'repeat'; children: AlgorithmNode[] }
-  | { ast: 'for'; children: [string, AlgorithmNode, AlgorithmNode] }
-  | { ast: 'do', children: AlgorithmNode[][]}
-  | { ast: 'condition', children: [AlgorithmNode, AlgorithmNode, AlgorithmNode | undefined] }
-  | { ast: 'comparison', children: [AlgorithmNode, AlgorithmNode] }
-  | { ast: 'negation', children: [AlgorithmNode] }
-  | { ast: 'throw', children: [AlgorithmNode] }
-  | { ast: 'literal', children: [val: string] }
-  | { ast: 'unknown', children: any }
-  | { ast: 'reference', children: [string] }
-  | { ast: 'call', children: [string, AlgorithmNode[]] }
-  | { ast: 'let', children: [string, AlgorithmNode] }
-  | { ast: 'list', children: AlgorithmNode[] }
-  | { ast: 'slot', children: [string] }
-  | { ast: 'or', children: [AlgorithmNode, AlgorithmNode] }
-  | { ast: 'and', children: [AlgorithmNode, AlgorithmNode] }
-  | { ast: 'setProperty', children: [string, AlgorithmNode, AlgorithmNode] }
-  | { ast: 'return', children: [AlgorithmNode] }
-  | { ast: 'property-access', children: [AlgorithmNode, AlgorithmNode] }
+  | { ast: 'block'; children: AlgorithmNode[] }
+  | { ast: 'innerBlockHack'; children: [string] }
+  | { ast: 'repeat'; children: [AlgorithmNode] }
+  | { ast: 'forEach'; children: [string, AlgorithmNode, AlgorithmNode] }
+  | { ast: 'block'; children: AlgorithmNode[] }
+  | { ast: 'string'; children: [string] }
+  | { ast: 'number'; children: [string] }
+  | { ast: 'reference'; children: [string] }
+  | { ast: 'percentReference'; children: [string] }
+  | { ast: 'slotReference', children: [string]}
+  | { ast: 'dottedProperty', children: [AlgorithmNode, ...AlgorithmNode[]]}
+  | { ast: 'booleanExpr', children: [string, AlgorithmNode, AlgorithmNode]}
+  | { ast: 'unaryBooleanExpr', children: [string, AlgorithmNode, AlgorithmNode]}
+  | { ast: 'call', children: [AlgorithmNode, ...AlgorithmNode[]]}
+  | { ast: 'list', children: AlgorithmNode[]}
+  | { ast: 'typeCheck', children: [string, AlgorithmNode]}
+  | { ast: 'condition', children: [AlgorithmNode, AlgorithmNode, AlgorithmNode | undefined]}
+  | { ast: 'let', children: [AlgorithmNode, AlgorithmNode]}
+  | { ast: 'set', children: [AlgorithmNode, AlgorithmNode]}
+  | { ast: 'return_', children: [AlgorithmNode]}
+  | { ast: 'throw_', children: [AlgorithmNode]}
+  | { ast: 'unknown'; children: (string | AlgorithmNode[])[] }
+
+export type NodeOfType<T extends AlgorithmNode['ast']> = Extract<AlgorithmNode, { ast: T }>
 
 export type Algorithm = AlgorithmNode[]
 
-// Warning: `tokens` array is mutable
-function parseAlgorithmStepTokens(tokens: GenericToken[]): Algorithm{
-  const is = (type: TokenType, value?: string) => {
-    const t = cur()
-    if (t.type === type) {
-      return value != null ? t.value.toLocaleLowerCase() === value : true
+const nonEmptyText = (node: HTMLElement) => node.childNodes.filter(node => node.tagName || node.textContent.trim() !== '')
+
+interface ParseOpts {
+  allowUnknown?: boolean
+}
+
+export function parseAlgorithm(node: HTMLElement, opts: ParseOpts): Algorithm {
+  assert.equal(node.tagName, "EMU-ALG", "algorithms are <EMU-ALG> elements")
+  const steps = [...node.children[0].children]
+  return steps.map(algoStep => parseAlgorithmStep(algoStep, opts))
+}
+
+export function parseAlgorithmStep(node: HTMLElement, opts: ParseOpts = {  }): AlgorithmNode {
+  assert.equal(node.tagName, "LI", "algorithm steps are <li> elements")
+
+  // We're going to be replacing inner blocks with fake tokens, so we need to keep track of them
+  const blockReferences: HTMLOListElement[] = []
+  const sourceText = [...node.childNodes].map(child => {
+    if (child.tagName === 'OL') {
+      const index = blockReferences.length
+      blockReferences.push(child)
+      return getInnerBlockHack(index)
+    } else {
+      return child.textContent
     }
-    return false
-  }
-  const afterIs = (type: TokenType, value?: string) => {
-    if (tokens[1]?.type === type) {
-      return value != null ? tokens[1]?.value.toLocaleLowerCase() === value : true
-    }
-    return false
-  }
-  const cur = () => tokens[0]
-  const next = () => tokens.shift()
-  const ended = () => tokens.length === 0
+  }).join(' ')
 
-  const expect = <TT extends GenericToken['type']>(type: TT, value?: string): TokenOfType<TT> => {
-    const t = cur()
-    if (t.type !== type || (value != null && typeof t.value === 'string' && value !== t.value.toLocaleLowerCase())) {
-      throw new Error('expected ' + type + ', got ' + t.type)
-    }
-    return next() as any as TokenOfType<TT>
-  }
+  let [parseError, parsed] = justParse(sourceText.toLocaleLowerCase())
+  if (parseError) {
+    if (!opts.allowUnknown) throw parseError
 
-
-  const tryConsume = (...things: string[]) => {
-    const matchI = (i: number) => {
-      if (i >= tokens.length || i >= things.length) { return false }
-
-      if (things[i] === ':' + tokens[i].type) {
-        return true
-      }
-
-      if (things[i].startsWith('$')) {
-        return true
-      }
-      if (tokens[i].type === 'identifier' && things[i] === ':' + tokens[i].value) {
-        return true
-      }
-      if (things[i].toLowerCase() === tokens[i].value.toLowerCase!() && tokens[i].type === 'word') {
-        return true
-      }
-      return false
-    }
-
-    return things.every((_, i) => matchI(i))
-  }
-
-  function parseAtom(): AlgorithmNode {
-    if (is('word')) {
-      return { ast: 'reference', children: [expect('word').value] }
-    }
-    if (is('identifier')) {
-      return { ast: 'reference', children: [expect('identifier').value] }
-    }
-    if (is('value')) {
-      return { ast: 'literal', children: [expect('value').value] }
-    }
-    if (is('slot-identifier')) {
-      return { ast: 'slot', children: [expect('slot-identifier').value] }
-    }
-
-    assert(false, 'expected word or literal, got ' + inspect(cur()))
-  }
-
-  function parseExpression(): AlgorithmNode {
-    function beforeSuffix(): AlgorithmNode {
-      // Conditions and loops with multiple items
-      // -------
-      if (tokens[0].type === 'supertoken') {
-        return {ast: 'do', children:  (next() as SuperToken).value.map(line => parseAlgorithmStepTokens([...line]))}
-      }
-
-      if (tryConsume('for', 'each', 'element', '$', 'of', '$', ':comma', 'do')) {
-        next(); next(); next();
-        const boundName = (next() as BasicToken).value
-        expect('word', 'of')
-        const list = parseAtom()
-        expect('comma')
-        next()
-        const body = parseExpression()
-        return { ast: 'for', children: [boundName, list, body]}
-      }
-
-      if (tryConsume('repeat', ':comma', ':supertoken')) {
-        next()
-        next()
-
-        const children = [parseExpression()]
-        return { ast: 'repeat', children }
-      }
-
-      // "the List/Whatever that is X" => X
-      if (tryConsume('the', ':identifier', 'that', 'is')) {
-        next(); next(); next(); next()
-      }
-
-      // Phrases
-      // -------
-      if (is('word', 'if')) {
-        next()
-        const condition = parseExpression()
-
-        if (is('comma')) next()
-        if (is('word', 'then')) next()
-
-        const then = parseExpression()
-
-        let elsee: AlgorithmNode | undefined = undefined
-        if (!ended()) {
-          elsee = parseExpression()
+    // Return an unknown node so the user can deal with it
+    return {
+      ast: 'unknown',
+      children: [...node.childNodes].map(child => {
+        if (child.tagName === 'OL') {
+          return child.children.map(parseAlgorithmStep)
         }
-        return { ast: 'condition', children: [condition, then, elsee] }
-      }
-
-      if (tryConsume('return', '$')) {
-        next()
-        return { ast: 'return', children: [parseAtom()] }
-      }
-
-      if (tryConsume('let', '$', 'be')) {
-        next()
-        const name = expect('identifier').value
-        expect('word', 'be')
-        const value = parseExpression()
-        return { ast: 'let', children: [name, value] }
-      }
-
-      if (tryConsume('a', 'new', 'empty', ':List')) {
-        next(); next(); next(); next();
-        return { ast: 'list', children: [] }
-      }
-
-      if (tryConsume('set', '$', ':dot', '$', 'to')) {
-        next()
-        const target = (next() as BasicToken).value
-        expect('dot')
-        const targetProperty = parseExpression()
-        expect('word', 'to')
-        const newValue = parseExpression()
-        return { ast: 'setProperty', children: [target, targetProperty, newValue] }
-      }
-
-      if (tryConsume('$', 'is', 'not', '$')) {
-        const left = parseAtom()
-        expect('word', 'is')
-        expect('word', 'not')
-        const right = parseAtom()
-        return { ast: 'comparison', children: [left, {ast: 'negation', children: [right]}] }
-      }
-
-      if (tryConsume('$', 'is', 'either', '$', 'or', '$')) {
-        const left = parseAtom()
-        expect('word', 'is')
-        expect('word', 'either')
-        const right1 = parseAtom()
-        expect('word', 'or')
-        const right2 = parseAtom()
-        if (is('comma')) next() // optional comma
-        return {
-          ast: 'or',
-          children: [
-            { ast: 'comparison', children: [left, right1] },
-            { ast: 'comparison', children: [left, right2] },
-          ]
-        }
-      }
-
-      if (tryConsume('$', 'is', '$')) {
-        const left = parseAtom()
-        expect('word', 'is')
-        const right = parseAtom()
-        if (is('comma')) next() // optional comma
-        return { ast: 'comparison', children: [left, right] }
-      }
-
-      if (tryConsume('throw', 'a', '$', 'exception')) {
-        next()
-        next()
-        const value = parseAtom()
-        next()
-        return { ast: 'throw', children: [value] }
-      }
-
-      // Property access
-      // -------
-      if (tryConsume('$', ':dot', '$')) {
-        const target = parseAtom()
-        expect('dot')
-        const targetProperty = parseAtom()
-        return { ast: 'property-access', children: [target, targetProperty] }
-      }
-
-      // Function call
-      // -------
-      if (tryConsume('perform', ':function-name')) {
-        next()
-      }
-
-      if (is('function-name') && afterIs('lParen')) {
-        const name = expect('function-name').value
-        expect('lParen')
-        const args = []
-        while (!ended() && !is('rParen')) {
-          args.push(parseExpression())
-          if (is('comma')) {
-            expect('comma')
+        return child.textContent
+      }).reduce(
+        // join adjacent strings
+        (acc, cur) => {
+          if (typeof cur === 'string' && typeof acc[acc.length - 1] === 'string') {
+            acc[acc.length - 1] += cur
+          } else {
+            acc.push(cur)
           }
-        }
-        expect('rParen')
-        return { ast: 'call', children: [name, args] }
-      }
-
-      // Atoms
-      // -------
-      if (is('word') || is('value') || is('identifier') || is('slot-identifier')) {
-        return parseAtom()
-      }
-
-      if (is('lList')) {
-        next()
-        const items = []
-        while (!ended() && !is('rList')) {
-          items.push(parseExpression())
-          if (is('comma')) {
-            expect('comma')
-          }
-        }
-        next()
-        return { ast: 'list', children: items }
-      }
-
-      throw new Error('garbage at end of expression: ' + inspect(tokens))
+          return acc
+        },
+        []
+      )
     }
-
-    const base = beforeSuffix()
-    if (base && tryConsume('is', ':value')) {
-      next()
-      return { ast: 'comparison', children: [base, parseAtom()] }
-    } else if (base && tryConsume('and')) {
-      next()
-      return { ast: 'and', children: [base, parseExpression()]}
-    } else if (base) {
-      return base
-    }
-
-    throw new Error('garbage at the end ' + inspect(tokens))
   }
 
-  let rootExpressions: AlgorithmNode[] = []
+  parsed = mapTree(parsed!, node => {
+    if (node.ast === 'innerBlockHack') {
+      const n = blockReferences[Number(node.children[0])]
+      if (!n) {
+        throw new Error(`invalid inner block hack: ${node.children[0]}`)
+      }
+      const children = [...n.children].map(step => parseAlgorithmStep(step, opts))
+      return {
+        ast: 'block',
+        children
+      }
+    }
+    return node
+  })
+  nodeSources.set(parsed, sourceText)
+  return parsed
+}
 
-  //while (cur()) {
-  rootExpressions.push(parseExpression())
-  if (!ended()) {
-    return rootExpressions.concat({ ast: 'unknown', children: ['GARBAGE AT END', ...tokens] })
+const nodeSources = new WeakMap<AlgorithmNode, string>()
+export const getNodeSource = (node: AlgorithmNode) => nodeSources.get(node)
+
+const mapTree = (
+  algo: AlgorithmNode,
+  fn: (node: AlgorithmNode) => AlgorithmNode,
+): AlgorithmNode => {
+  return fn({
+    ...algo,
+    children: algo.children.map(child => {
+      if (Array.isArray(child)) {
+        return child.map(node => mapTree(node, fn))
+      } else if (!child || typeof child !== 'object') {
+        return child
+      } else {
+        return mapTree(child, fn)
+      }
+    })
+  })
+}
+
+/** plainly parse with our grammar and handle ambiguity errors */
+const justParse = (source = ''): [Error, null] | [null, AlgorithmNode] => {
+  const parser = new Parser(Grammar, { lexer: algorithmTokenizer })
+  let solutions
+  try {
+     solutions = parser.feed(source.toLocaleLowerCase()).finish()
+  } catch (e) {
+    return [e as Error, null]
   }
-  //}
-  return rootExpressions
-}
 
-export function parseAlgorithmStep(node: HTMLElement): Algorithm {
-  let tokens = tokenizeNodes({    tokenizer: algorithmTokenizer, nodes: node.childNodes  })
 
-  return parseAlgorithmStepTokens(tokens)
-}
-
-export function parseAlgorithmList(liChildren: HTMLLIElement[]): Algorithm {
-  const li = liChildren.filter(child => child.tagName === 'LI')
-  assert(liChildren.length === li.length, 'expected <ol> to only have <li>')
-
-  // TODO split steps!
-  return [...li].flatMap(parseAlgorithmStep)
-}
-
-export function parseAlgorithm({ algorithm }: HTMLAlgorithm): Algorithm {
-
-  const ol = getOnly(algorithm.childNodes)
-  assert(ol.tagName === 'OL', 'expected ol')
-
-  return (parseAlgorithmList(ol.childNodes))
+  switch (solutions.length) {
+    case 0: {
+      return [new Error("no solutions found"), null]
+    }
+    case 1: {
+      return [null, solutions[0]]
+    }
+    default: {
+      for (const solution of solutions) {
+        const pretty = prettyPrintAST(solution)
+        console.log(pretty)
+      }
+      // This is a real error
+      throw new Error("multiple solutions found")
+    }
+  }
 }
