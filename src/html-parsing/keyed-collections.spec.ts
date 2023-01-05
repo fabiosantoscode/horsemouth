@@ -10,7 +10,7 @@ const { document } = parseHTML(
 
 const sections = document.querySelectorAll("#sec-set-objects emu-clause");
 
-const algorithms: HTMLAlgorithm[] = sections.flatMap(findAlgorithms);
+const algorithms: HTMLAlgorithm[] = [...sections].flatMap(findAlgorithms);
 
 it("can find the sections containing methods", () => {
   expect(algorithms.length).toBeGreaterThan(0);

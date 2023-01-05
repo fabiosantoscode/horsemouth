@@ -1,7 +1,7 @@
 import prettier from "prettier";
 import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
 import { walk } from "../parser-tools/walk";
-import { AlgorithmNode, getNodeSource } from "../parser/parse";
+import {AlgorithmNode, getNodeSource, AlgorithmBlock} from '../parser/parse';
 import { cleanIdentifier } from "../utils/cleanIdentifier";
 
 let unnamedFunctionCount = 0;
@@ -9,7 +9,7 @@ let unnamedFunctionCount = 0;
 export interface AlgorithmWithMetadata {
   algName?: string;
   headerComment?: string;
-  algorithm: AlgorithmNode[];
+  algorithm: AlgorithmBlock;
 }
 
 export function stringifyToJs(algorithms: AlgorithmWithMetadata[]) {
@@ -17,7 +17,7 @@ export function stringifyToJs(algorithms: AlgorithmWithMetadata[]) {
 
   const slots = new Set();
   for (const { algorithm } of algorithms) {
-    walk(algorithm, (node) => {
+    walk(algorithm.children, (node) => {
       if (node.ast === "slotReference") {
         slots.add(
           `const ${slotVarName(node.children[0])} = Symbol('slot ${
@@ -53,14 +53,14 @@ export function stringifyAlgorithmToJs({
   const uglyCode = `
 ${headerComment ?? `/**` + algName + `*/`}
 function ${fname}() {
-${algorithm.map((node) => "    " + stringifyAlgorithmNode(node)).join("\n")}
+${algorithm.children.map((node) => "    " + stringifyAlgorithmStatement(node)).join("\n")}
 }
 `;
   return prettier.format(uglyCode, { parser: "babel" });
 }
 
 // wrapper to add comment wit source text
-const stringifyAlgorithmNode = (node: AlgorithmNode) => {
+const stringifyAlgorithmStatement = (node: AlgorithmNode) => {
   const source = getNodeSource(node);
   return source
     ? `
@@ -70,7 +70,7 @@ const stringifyAlgorithmNode = (node: AlgorithmNode) => {
 };
 
 function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
-  const s = stringifyAlgorithmNode;
+  const s = stringifyAlgorithmStatement;
   switch (node.ast) {
     case "reference": {
       return cleanIdentifier(node.children[0]);

@@ -1,9 +1,12 @@
 {
   "extends": "@tsconfig/node16/tsconfig.json",
   "compilerOptions": {
+    // add dom libs
+    "lib": ["dom", "dom.iterable", "es2021"],
     "outDir": "dist",
     "skipLibCheck": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "noEmit": true
   },
   "ts-node": { "transpileOnly": true },
   "include": ["src"],

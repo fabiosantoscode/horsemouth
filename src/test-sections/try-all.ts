@@ -1,10 +1,9 @@
 import fs from "fs";
-import { HTMLElement, parseHTML } from "linkedom";
+import { parseHTML } from "linkedom";
 import path from "path";
 import "../experiments";
-import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
 import { walk } from "../parser-tools/walk";
-import { parseAlgorithm } from "../parser/parse";
+import { parseAlgorithmBlock } from "../parser/parse";
 import {
   AlgorithmWithMetadata,
   stringifyToJs,
@@ -18,7 +17,7 @@ const keyedCollections = fs.readFileSync(
 
 const { document } = parseHTML(keyedCollections);
 
-const algs = document.querySelectorAll("emu-alg") as HTMLElement[];
+const algs = document.querySelectorAll("emu-alg");
 
 const toStringify = [] as AlgorithmWithMetadata[];
 
@@ -26,19 +25,17 @@ for (const alg of algs) {
   if (alg.closest("emu-note")) {
     continue;
   }
-  const algName = (alg.querySelector("h1, h2, h3") ?? alg.parentNode).id as
+  const algName = (alg.querySelector("h1, h2, h3") ?? (alg.parentNode as Element))?.id as
     | string
     | undefined;
 
-  const algorithm = parseAlgorithm(alg, { allowUnknown: true });
+  const algorithm = parseAlgorithmBlock(alg, { allowUnknown: true });
 
   toStringify.push({
-    headerComment: "// " + alg.parentNode.id,
+    headerComment: "// " + algName,
     algName,
     algorithm,
   });
-
-  console.log(prettyPrintAST(algorithm));
 }
 
 console.log(stringifyToJs(toStringify));
@@ -81,7 +78,7 @@ for (const { algorithm } of toStringify) {
   } else {
     functionsWithUnknown++;
   }
-  const everyStatementUnknown = algorithm.every(
+  const everyStatementUnknown = algorithm.children.every(
     (node) => node.ast === "unknown"
   );
   if (everyStatementUnknown) {

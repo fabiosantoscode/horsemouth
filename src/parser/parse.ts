@@ -1,20 +1,21 @@
-import assert from "assert";
-import { HTMLElement, HTMLOListElement } from "linkedom";
 import "../experiments";
-import { algorithmTokenizer, getInnerBlockHack } from "./tokenizer";
+import { algorithmTokenizer } from "./tokenizer";
 
 import { Parser } from "nearley";
-import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
-import Grammar from "./grammar";
-import { mapTree } from "../parser-tools/walk";
-import { cleanIdentifier } from "../utils/cleanIdentifier";
 import {
+  AlgorithmBlockFromHtml,
   AlgorithmStepFromHtml,
-  getAlgorithmStepFromHtml,
-} from "./getAlgorithmFromHtml";
+  getAlgorithmBlockFromHtml,
+  getAlgorithmStepFromHtml
+} from "../html-parsing/getAlgorithmFromHtml";
+import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
+import { mapTree } from "../parser-tools/walk";
+import Grammar from "./grammar";
+
+export type AlgorithmBlock = { ast: "block"; sourceBlock: AlgorithmBlockFromHtml, children: AlgorithmNode[] }
 
 export type AlgorithmNode =
-  | { ast: "block"; children: AlgorithmNode[] }
+  | AlgorithmBlock
   | { ast: "innerBlockHack"; children: [string] }
   | { ast: "repeat"; children: [AlgorithmNode] }
   | { ast: "forEach"; children: [string, AlgorithmNode, AlgorithmNode] }
@@ -54,21 +55,34 @@ interface ParseOpts {
   allowUnknown?: boolean;
 }
 
-export function parseAlgorithm(
-  node: HTMLElement,
-  opts: ParseOpts = {}
-): Algorithm {
-  assert.equal(node.tagName, "EMU-ALG", "algorithms are <EMU-ALG> elements");
-  const steps = [...node.children[0].children];
-  return steps.map((algoStep) => parseAlgorithmStep(algoStep, opts));
+export function parseAlgorithmBlock(
+  node: Element | AlgorithmBlockFromHtml,
+  opts: ParseOpts = {},
+): AlgorithmBlock {
+  const sourceBlock = getAlgorithmBlockFromHtml(node)
+
+  const steps = sourceBlock.steps;
+  return {
+    ast: 'block',
+    sourceBlock,
+    children: steps.map((algoStep) => parseAlgorithmStep(algoStep, opts))
+  };
 }
 
 export function parseAlgorithmStep(
-  node: HTMLElement | AlgorithmStepFromHtml | string,
+  node: Element | AlgorithmStepFromHtml | string,
   opts: ParseOpts = {}
 ): AlgorithmNode {
   // We're going to be replacing inner blocks with fake tokens, so we need to keep track of them
   const { sourceText, blockReferences } = getAlgorithmStepFromHtml(node);
+
+  const getParsedBlockFromIndex = (index: number|string) => {
+    const block = blockReferences[Number(index)];
+    if (!block) {
+      throw new Error(`invalid inner block hack: ${index}`);
+    }
+    return parseAlgorithmBlock(block, opts);
+  };
 
   const [parseError, parsed] = justParse(sourceText.toLocaleLowerCase());
 
@@ -91,12 +105,7 @@ export function parseAlgorithmStep(
       children: (
         [...algorithmTokenizer.reset(sourceText)].map((tok) => {
           if (tok.type === "innerBlockHack") {
-            return {
-              ast: "block",
-              children: blockReferences[+tok.value].map((s) =>
-                parseAlgorithmStep(s, opts)
-              ),
-            } as AlgorithmNode;
+            return getParsedBlockFromIndex((tok.value));
           }
           return tok.text;
         }) as AlgorithmNode[]
@@ -130,15 +139,7 @@ export function parseAlgorithmStep(
   } else {
     returnedAst = mapTree(parsed, (node) => {
       if (node.ast === "innerBlockHack") {
-        const n = blockReferences[Number(node.children[0])];
-        if (!n) {
-          throw new Error(`invalid inner block hack: ${node.children[0]}`);
-        }
-        const children = [...n].map((step) => parseAlgorithmStep(step, opts));
-        return {
-          ast: "block",
-          children,
-        };
+        return getParsedBlockFromIndex(node.children[0])
       }
       return node;
     });

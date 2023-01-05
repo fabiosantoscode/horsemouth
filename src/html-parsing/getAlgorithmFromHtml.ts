@@ -1,35 +1,48 @@
 import assert from "assert";
-import { HTMLElement, HTMLOListElement } from "linkedom";
-import { getInnerBlockHack } from "./tokenizer";
+import { getInnerBlockHack } from "../parser/tokenizer";
 import { cleanIdentifier } from "../utils/cleanIdentifier";
+import { getOnly } from "../utils/getOnly";
+import { isHtmlTag } from "./htmlUtils";
 
+export interface AlgorithmBlockFromHtml {
+  steps: AlgorithmStepFromHtml[];
+}
 export type AlgorithmStepFromHtml = {
   sourceText: string;
-  blockReferences: AlgorithmStepFromHtml[][];
+  blockReferences: AlgorithmBlockFromHtml[];
 };
 
 export const getAlgorithmBlockFromHtml = (
-  node: HTMLElement
-): AlgorithmStepFromHtml[] => {
+  node: Element | AlgorithmBlockFromHtml
+): AlgorithmBlockFromHtml => {
+  // for testing
+  if ((node as AlgorithmBlockFromHtml).steps) return node as AlgorithmBlockFromHtml;
+
+  if (isHtmlTag(node, "EMU-ALG")) {
+    node = getOnly(node.children)
+  }
+
   assert.equal(
     (node as any).tagName,
     "OL",
     "algorithm blocks are <OL> elements"
   );
 
-  return [...(node as HTMLOListElement).childNodes].flatMap((child) => {
+  const steps = [...(node as HTMLOListElement).children].flatMap((child) => {
     if (child.tagName === "LI") {
-      return [getAlgorithmStepFromHtml(child as HTMLElement)];
+      return [getAlgorithmStepFromHtml(child)];
     }
     if (child.tagName) {
       throw new Error(`Unexpected tag ${child.tagName} in algorithm block`);
     }
     return [];
   });
+
+  return { steps };
 };
 
 export const getAlgorithmStepFromHtml = (
-  node: HTMLElement | AlgorithmStepFromHtml | string
+  node: Element | AlgorithmStepFromHtml | string
 ): AlgorithmStepFromHtml => {
   // for testing
   if (typeof node === "string") {
@@ -44,8 +57,8 @@ export const getAlgorithmStepFromHtml = (
     "algorithm steps are <li> elements"
   );
 
-  const blockReferences: AlgorithmStepFromHtml[][] = [];
-  const sourceText = [...(node as HTMLElement).childNodes]
+  const blockReferences: AlgorithmBlockFromHtml[] = [];
+  const sourceText = ([...(node as Element).childNodes] as Element[])
     .flatMap((child): string[] => {
       if (child.tagName && child.getAttribute("aria-hidden")) {
         // Steps are numbered with little spans. Assume everything aria-hidden is irrelevant
@@ -59,7 +72,8 @@ export const getAlgorithmStepFromHtml = (
       if (child.tagName === "EMU-XREF" && child.getAttribute("aoid")) {
         return [cleanIdentifier(child.getAttribute("aoid") || "")];
       } else {
-        return [child.textContent.trim()];
+        const text = child.textContent?.trim()
+        return text ? [text] : []
       }
     })
     .join(" ");

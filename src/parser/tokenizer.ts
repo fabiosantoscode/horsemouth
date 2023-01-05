@@ -1,5 +1,6 @@
 import moo from "moo";
 import type { HorsemouthLexer } from "./tokenizerMooOverride";
+import {noSpaceTokenizer} from '../parser-tools/noSpaceTokenizer';
 
 const tokens = {
   word: {
@@ -36,10 +37,5 @@ export const getInnerBlockHack = (num: number) => `:::innerblockhack${num}`;
 
 export type TokenType = keyof typeof tokens;
 export type TokenOfType<T extends TokenType> = moo.Token & { type: T };
-export const algorithmTokenizer = moo.compile(tokens) as HorsemouthLexer;
-const _next = algorithmTokenizer.next;
-algorithmTokenizer.next = () => {
-  const token = _next.call(algorithmTokenizer);
-  if (token?.type === "space") return algorithmTokenizer.next();
-  return token;
-};
+export const algorithmTokenizer =
+  noSpaceTokenizer(moo.compile(tokens)) as HorsemouthLexer;

@@ -28,6 +28,7 @@ const allJsKeywordsAndReservedWords = [
 
 export const cleanIdentifier = (id: string) =>
   id
+    .trim()
     .replaceAll(/[^a-zA-Z0-9_]+/g, "_")
     .replaceAll(
       new RegExp(`^(${allJsKeywordsAndReservedWords.join("|")})$`, "g"),

@@ -1,6 +1,7 @@
 import moo from "moo";
 import type { HTMLAlgorithm } from "../html-parsing/findAlgorithms";
 import { getDefined } from "../utils/getDefined";
+import {noSpaceTokenizer} from '../parser-tools/noSpaceTokenizer';
 
 interface AlgorithmArgs {
   argName: string;
@@ -11,8 +12,7 @@ type AlgorithmUsage =
   | { type: "function"; name: string; args: AlgorithmArgs[] }
   | { type: "method"; name: string; args: AlgorithmArgs[] };
 
-export function getAlgorithmHead({ section }: HTMLAlgorithm): AlgorithmUsage {
-  const tokenizer = moo.compile({
+  const algorithmHeadTokenizer = noSpaceTokenizer(moo.compile({
     word: /[a-zA-Z_$][a-zA-Z0-9_$]*/,
     space: / +/,
     comma: ",",
@@ -22,11 +22,12 @@ export function getAlgorithmHead({ section }: HTMLAlgorithm): AlgorithmUsage {
     rBrace: "}",
     lSquareBracket: "[",
     rSquareBracket: "]",
-  });
+  }));
 
-  section.querySelector(".secnum").remove();
+export function getAlgorithmHead({ section }: HTMLAlgorithm): AlgorithmUsage {
+  section.querySelector(".secnum")?.remove();
 
-  const headTokens = [...tokenizer.reset(section.textContent!)];
+  const headTokens = [...algorithmHeadTokenizer.reset(section.textContent!)];
 
   const cur = () => headTokens[0];
   const next = () => headTokens.shift();

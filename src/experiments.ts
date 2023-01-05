@@ -1,6 +1,5 @@
 import { readFileSync, writeFileSync } from "fs";
-import { HTMLElement, parseHTML, Element, Text } from "linkedom";
-import { HTMLDocument } from "linkedom/types/html/document";
+import { parseHTML, Element, Text } from "linkedom";
 
 Element.prototype[Symbol.for("nodejs.util.inspect.custom")] = function () {
   return `<${this.tagName.toLowerCase()} ${(this.attributes as any)
@@ -27,8 +26,8 @@ const getTopLevel = () => {
   );
 
   const children = [
-    ...(document as HTMLDocument).querySelector("#spec-container").children,
+    ...(document).querySelector("#spec-container")!.children,
   ].filter((child) => child.tagName.startsWith("EMU-"));
 
-  return children as HTMLElement[];
+  return children;
 };

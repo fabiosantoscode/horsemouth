@@ -1,13 +1,12 @@
 import assert from "assert";
-import { HTMLElement } from "linkedom";
 
 export interface HTMLAlgorithm {
-  section: HTMLElement;
-  algorithm: HTMLElement;
+  section: Element;
+  algorithm: Element;
 }
 
 export function findAlgorithms(
-  clauses: HTMLElement | HTMLElement[]
+  clauses: Element | Element[]
 ): HTMLAlgorithm[] {
   return [clauses].flat().flatMap((clause) => {
     const algChildren = [...clause.children].filter(
