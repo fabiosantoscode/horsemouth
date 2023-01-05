@@ -4,7 +4,7 @@ import { AlgorithmNode } from "./parser/parse";
 expect.addSnapshotSerializer({
   test: (val) =>
     val && typeof val.ast === "string" && Array.isArray(val.children),
-  print: (val, print, indent) => {
+  print: (val) => {
     return prettyPrintAST(val as AlgorithmNode);
   },
 });

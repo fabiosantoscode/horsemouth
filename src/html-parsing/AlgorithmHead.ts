@@ -1,5 +1,4 @@
 import moo from "moo";
-import { type GenericToken, tokenizeNodes } from "../parse-tools/tokenizeNodes";
 import type { HTMLAlgorithm } from "../html-parsing/findAlgorithms";
 import { getDefined } from "../utils/getDefined";
 
@@ -27,10 +26,7 @@ export function getAlgorithmHead({ section }: HTMLAlgorithm): AlgorithmUsage {
 
   section.querySelector(".secnum").remove();
 
-  const headTokens: GenericToken[] = tokenizeNodes({
-    tokenizer,
-    nodes: section.querySelector("h1").childNodes,
-  });
+  const headTokens = [...tokenizer.reset(section.textContent!)];
 
   const cur = () => headTokens[0];
   const next = () => headTokens.shift();

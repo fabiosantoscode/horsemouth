@@ -17,7 +17,7 @@ export function main() {
 
   writeFileSync(
     __dirname + "/sections/keyed-collections.html",
-    document.find((tag) => tag.id === "sec-keyed-collections").outerHTML
+    document.find((tag) => tag.id === "sec-keyed-collections")!.outerHTML
   );
 }
 

@@ -45,12 +45,12 @@ export function stringifyAlgorithmToJs({
   algName,
   algorithm,
 }: AlgorithmWithMetadata) {
-  if (!cleanIdentifier(algName)) {
-    algName = `TODO_unnamedFunction${++unnamedFunctionCount}`;
-  }
+  const fname =
+    cleanIdentifier(algName ?? "") ||
+    `TODO_unnamedFunction${++unnamedFunctionCount}`;
   const uglyCode = `
 ${headerComment ?? `/**` + algName + `*/`}
-function ${cleanIdentifier(algName)}() {
+function ${fname}() {
 ${algorithm.map((node) => "    " + stringifyAlgorithmNode(node)).join("\n")}
 }
 `;

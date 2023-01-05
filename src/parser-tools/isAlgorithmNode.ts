@@ -7,4 +7,4 @@ export const isAlgorithmNode = (node: any): node is AlgorithmNode => {
     typeof node.ast === "string" &&
     Array.isArray(node.children)
   );
-}
+};

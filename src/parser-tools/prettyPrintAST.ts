@@ -1,7 +1,8 @@
 import { AlgorithmNode } from "../parser/parse";
+import { isAlgorithmNode } from "./isAlgorithmNode";
 
 export function prettyPrintAST(
-  astNode: AlgorithmNode | AlgorithmNode[],
+  astNode: AlgorithmNode | AlgorithmNode[] | string | undefined,
   indentLevel = 0
 ): string {
   const currentIndent = "  ".repeat(indentLevel);
@@ -13,13 +14,11 @@ export function prettyPrintAST(
       .join("\n")}\n${currentIndent}]`;
   }
 
-  if (typeof astNode === "string") {
-    return astNode;
+  if (!isAlgorithmNode(astNode)) {
+    return String(astNode);
   }
 
   switch (astNode.ast) {
-    case "literal":
-      return `lit ${astNode.children[0]}`;
     case "reference":
       return `<${astNode.children[0]}>`;
     case "slotReference":

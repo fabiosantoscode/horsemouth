@@ -1,15 +1,14 @@
 import fs from "fs";
+import { HTMLElement, parseHTML } from "linkedom";
 import path from "path";
-import { HTMLDivElement, HTMLElement, parseHTML } from "linkedom";
 import "../experiments";
-import { Algorithm, AlgorithmNode, parseAlgorithm } from "../parser/parse";
 import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
-import {
-  stringifyToJs,
-  AlgorithmWithMetadata,
-} from "../stringify/stringifyToJs";
 import { walk } from "../parser-tools/walk";
-import { HTMLAlgorithm } from "../html-parsing/findAlgorithms";
+import { parseAlgorithm } from "../parser/parse";
+import {
+  AlgorithmWithMetadata,
+  stringifyToJs,
+} from "../stringify/stringifyToJs";
 
 // read ./keyed-collections.html
 const keyedCollections = fs.readFileSync(
@@ -45,10 +44,10 @@ for (const alg of algs) {
     toStringify.push({
       algName,
       headerComment: `
-    // ${alg.parentNode.id}
-    /***********************
-     * FATAL ERROR
-     ***********************
+ // ${alg.parentNode.id}
+ /***********************
+ * FATAL ERROR
+ ***********************
     ${(e as Error).message.replaceAll(/\*\//g, "/")}
     */
     `,
@@ -81,7 +80,11 @@ for (const { algorithm } of toStringify) {
 }
 
 console.log({
-  functionsWithoutUnknown,
-  functionsWithUnknown,
-  totalFunctions: toStringify.length,
+  "Function count": toStringify.length,
+  "Times that 'unknown' structure was used": unknownCount,
+  "Functions that don't need 'unknown'": functionsWithoutUnknown,
+  "Functions that used 'unknown'":
+    functionsWithUnknown +
+    Math.round(((functionsWithUnknown / toStringify.length) * 1000) / 10) +
+    "%",
 });

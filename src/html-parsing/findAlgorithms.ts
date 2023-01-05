@@ -1,6 +1,5 @@
 import assert from "assert";
 import { HTMLElement } from "linkedom";
-import { Algorithm } from "../parser/parse";
 
 export interface HTMLAlgorithm {
   section: HTMLElement;

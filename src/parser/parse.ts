@@ -27,7 +27,7 @@ export type AlgorithmNode =
     }
   | { ast: "call"; children: [AlgorithmNode, ...AlgorithmNode[]] }
   | { ast: "list"; children: AlgorithmNode[] }
-  | { ast: "typeCheck"; children: [string, AlgorithmNode] }
+  | { ast: "typeCheck"; children: [AlgorithmNode, AlgorithmNode] }
   | {
       ast: "condition";
       children: [AlgorithmNode, AlgorithmNode, AlgorithmNode | undefined];
@@ -49,7 +49,10 @@ interface ParseOpts {
   allowUnknown?: boolean;
 }
 
-export function parseAlgorithm(node: HTMLElement, opts: ParseOpts = {}): Algorithm {
+export function parseAlgorithm(
+  node: HTMLElement,
+  opts: ParseOpts = {}
+): Algorithm {
   assert.equal(node.tagName, "EMU-ALG", "algorithms are <EMU-ALG> elements");
   const steps = [...node.children[0].children];
   return steps.map((algoStep) => parseAlgorithmStep(algoStep, opts));
@@ -137,7 +140,6 @@ export function parseAlgorithmStep(
 
 const nodeSources = new WeakMap<AlgorithmNode, string>();
 export const getNodeSource = (node: AlgorithmNode) => nodeSources.get(node);
-
 
 /** plainly parse with our grammar and handle ambiguity errors */
 const justParse = (source = ""): [Error, null] | [null, AlgorithmNode] => {
