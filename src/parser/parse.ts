@@ -7,6 +7,11 @@ import { Parser } from "nearley";
 import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
 import Grammar from "./grammar";
 import { mapTree } from "../parser-tools/walk";
+import { cleanIdentifier } from "../utils/cleanIdentifier";
+import {
+  AlgorithmStepFromHtml,
+  getAlgorithmStepFromHtml,
+} from "./getAlgorithmFromHtml";
 
 export type AlgorithmNode =
   | { ast: "block"; children: AlgorithmNode[] }
@@ -20,9 +25,9 @@ export type AlgorithmNode =
   | { ast: "percentReference"; children: [string] }
   | { ast: "slotReference"; children: [string] }
   | { ast: "dottedProperty"; children: [AlgorithmNode, ...AlgorithmNode[]] }
-  | { ast: "booleanExpr"; children: [string, AlgorithmNode, AlgorithmNode] }
+  | { ast: "binaryExpr"; children: [string, AlgorithmNode, AlgorithmNode] }
   | {
-      ast: "unaryBooleanExpr";
+      ast: "unaryExpr";
       children: [string, AlgorithmNode, AlgorithmNode];
     }
   | { ast: "call"; children: [AlgorithmNode, ...AlgorithmNode[]] }
@@ -59,47 +64,43 @@ export function parseAlgorithm(
 }
 
 export function parseAlgorithmStep(
-  node: HTMLElement,
+  node: HTMLElement | AlgorithmStepFromHtml | string,
   opts: ParseOpts = {}
 ): AlgorithmNode {
-  assert.equal(node.tagName, "LI", "algorithm steps are <li> elements");
-
-  const cleanedSteps = [...node.childNodes].flatMap((child) => {
-    if (child.tagName && child.getAttribute("aria-hidden")) {
-      // Steps are numbered with little spans. Assume everything aria-hidden is irrelevant
-      return [];
-    }
-    return [child];
-  });
-
   // We're going to be replacing inner blocks with fake tokens, so we need to keep track of them
-  const blockReferences: HTMLOListElement[] = [];
-  const sourceText = cleanedSteps
-    .map((child) => {
-      if (child.tagName === "OL") {
-        const index = blockReferences.length;
-        blockReferences.push(child);
-        return getInnerBlockHack(index);
-      } else {
-        return child.textContent.trim();
-      }
-    })
-    .join(" ");
+  const { sourceText, blockReferences } = getAlgorithmStepFromHtml(node);
 
-  let [parseError, parsed] = justParse(sourceText.toLocaleLowerCase());
-  if (parseError) {
-    if (!opts.allowUnknown) throw parseError;
+  const [parseError, parsed] = justParse(sourceText.toLocaleLowerCase());
+
+  let returnedAst: AlgorithmNode;
+
+  if (parseError !== "ok") {
+    if (!opts.allowUnknown) {
+      throw parsed instanceof Error
+        ? parsed
+        : new Error(
+            parsed
+              .map((a) => prettyPrintAST(a))
+              .join("\n... is ambiguous with ...\n")
+          );
+    }
 
     // Return an unknown node so the user can deal with it
-    return {
+    returnedAst = {
       ast: "unknown",
-      children: cleanedSteps
-        .map((child) => {
-          if (child.tagName === "OL") {
-            return child.children.map(parseAlgorithmStep);
+      children: (
+        [...algorithmTokenizer.reset(sourceText)].map((tok) => {
+          if (tok.type === "innerBlockHack") {
+            return {
+              ast: "block",
+              children: blockReferences[+tok.value].map((s) =>
+                parseAlgorithmStep(s, opts)
+              ),
+            } as AlgorithmNode;
           }
-          return child.textContent;
-        })
+          return tok.text;
+        }) as AlgorithmNode[]
+      )
         .reduce(
           // join adjacent strings
           (acc, cur) => {
@@ -107,64 +108,73 @@ export function parseAlgorithmStep(
               typeof cur === "string" &&
               typeof acc[acc.length - 1] === "string"
             ) {
-              acc[acc.length - 1] += cur;
+              acc[acc.length - 1] += " " + cur;
             } else {
               acc.push(cur);
             }
             return acc;
           },
-          []
+          [] as (string | AlgorithmNode)[]
+        )
+        .concat(
+          parseError === "parseError"
+            ? []
+            : parsed.map(
+                (ambiguousSolution, i) =>
+                  ` (ambiguous reading ${i}: ${prettyPrintAST(
+                    ambiguousSolution
+                  )})`
+              )
         ),
     };
+  } else {
+    returnedAst = mapTree(parsed, (node) => {
+      if (node.ast === "innerBlockHack") {
+        const n = blockReferences[Number(node.children[0])];
+        if (!n) {
+          throw new Error(`invalid inner block hack: ${node.children[0]}`);
+        }
+        const children = [...n].map((step) => parseAlgorithmStep(step, opts));
+        return {
+          ast: "block",
+          children,
+        };
+      }
+      return node;
+    });
   }
 
-  parsed = mapTree(parsed!, (node) => {
-    if (node.ast === "innerBlockHack") {
-      const n = blockReferences[Number(node.children[0])];
-      if (!n) {
-        throw new Error(`invalid inner block hack: ${node.children[0]}`);
-      }
-      const children = [...n.children].map((step) =>
-        parseAlgorithmStep(step, opts)
-      );
-      return {
-        ast: "block",
-        children,
-      };
-    }
-    return node;
-  });
-  nodeSources.set(parsed, sourceText);
-  return parsed;
+  nodeSources.set(returnedAst, sourceText);
+  return returnedAst;
 }
 
 const nodeSources = new WeakMap<AlgorithmNode, string>();
 export const getNodeSource = (node: AlgorithmNode) => nodeSources.get(node);
 
-/** plainly parse with our grammar and handle ambiguity errors */
-const justParse = (source = ""): [Error, null] | [null, AlgorithmNode] => {
+/** plainly parse with our grammar and understand the error (if any) */
+const justParse = (
+  source = ""
+):
+  | ["parseError", Error]
+  | ["ambiguityError", AlgorithmNode[]]
+  | ["ok", AlgorithmNode] => {
   const parser = new Parser(Grammar, { lexer: algorithmTokenizer });
   let solutions;
   try {
     solutions = parser.feed(source.toLocaleLowerCase()).finish();
   } catch (e) {
-    return [e as Error, null];
+    return ["parseError", e as Error];
   }
 
   switch (solutions.length) {
     case 0: {
-      return [new Error("no solutions found"), null];
+      return ["parseError", new Error("no solutions found")];
     }
     case 1: {
-      return [null, solutions[0]];
+      return ["ok", solutions[0]];
     }
     default: {
-      for (const solution of solutions) {
-        const pretty = prettyPrintAST(solution);
-        console.log(pretty);
-      }
-      // This is a real error
-      throw new Error("multiple solutions found");
+      return ["ambiguityError", solutions];
     }
   }
 };

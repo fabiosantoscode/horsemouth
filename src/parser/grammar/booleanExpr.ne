@@ -1,48 +1,61 @@
-# SIMPLE EXPRESSIONS
+# BOOLEAN COMBINATORS
 ######################################
 
 expr        -> booleanExpr                        {% id %}
-booleanExpr -> expr "is" expr                     {% ([expr1, is, expr2]) =>
+
+booleanExpr -> comparisonExpr                     {% id %}
+booleanExpr -> booleanExpr ("and" | "or") comparisonExpr   {% ([expr1, op, expr2]) =>
                                                     ({
-                                                      ast: 'booleanExpr',
+                                                      ast: 'binaryExpr',
+                                                      children: [op[0].text, expr1, expr2]
+                                                    })
+                                                  %}
+
+# COMPARISONS
+comparisonExpr -> mathExpr                        {% id %}
+comparisonExpr -> comparisonExpr "is" mathExpr {% ([expr1, is, expr2]) =>
+                                                    ({
+                                                      ast: 'binaryExpr',
                                                       children: ['equals', expr1, expr2]
                                                     })
                                                   %}
 
-booleanExpr -> expr "is" "not" expr               {% ([expr1, is, not, expr2]) =>
+comparisonExpr -> comparisonExpr "is" "not" mathExpr
+                                                  {% ([expr1, is, not, expr2]) =>
                                                     ({
-                                                      ast: 'unaryBooleanExpr',
+                                                      ast: 'unaryExpr',
                                                       children: [
                                                         'not',
                                                         ({
-                                                          ast: 'booleanExpr',
+                                                          ast: 'binaryExpr',
                                                           children: ['equals', expr1, expr2]
                                                         })
                                                       ]
                                                     })
                                                   %}
 
-booleanExpr -> expr "is" "either" expr "or" expr
-                                                {% ([expr1, is, either, expr2, or, expr3]) =>
-                                                  ({
-                                                    ast: 'booleanExpr',
-                                                    children: [
-                                                      'or',
-                                                      {
-                                                        ast: 'booleanExpr',
-                                                        children: ['equals', expr1, expr2]
-                                                      },
-                                                      {
-                                                        ast: 'booleanExpr',
-                                                        children: ['equals', expr1, expr3]
-                                                      }
-                                                    ]
-                                                  })
-                                                %}
+comparisonExpr -> comparisonExpr "is" "either" mathExpr "or" mathExpr
+                                                  {% ([expr1, is, either, expr2, or, expr3]) =>
+                                                    ({
+                                                      ast: 'binaryExpr',
+                                                      children: [
+                                                        'or',
+                                                        {
+                                                          ast: 'binaryExpr',
+                                                          children: ['equals', expr1, expr2]
+                                                        },
+                                                        {
+                                                          ast: 'binaryExpr',
+                                                          children: ['equals', expr1, expr3]
+                                                        }
+                                                      ]
+                                                    })
+                                                  %}
 
-booleanExpr -> booleanExpr "and" booleanExpr    {% ([expr1, and, expr2]) =>
-                                                  ({
-                                                    ast: 'booleanExpr',
-                                                    children: ['and', expr1, expr2]
-                                                  })
-                                                %}
+comparisonExpr -> comparisonExpr ("<" | ">") mathExpr
+                                                  {% ([expr1, op, expr2]) =>
+                                                    ({
+                                                      ast: 'binaryExpr',
+                                                      children: [op, expr1, expr2]
+                                                    })
+                                                  %}

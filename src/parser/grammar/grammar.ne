@@ -1,30 +1,20 @@
 
 @lexer tokenizer
 
+@include "./grammar/utils.ne"
 @include "./grammar/statements.ne"
 @include "./grammar/lhs.ne"
 @include "./grammar/atom.ne"
+@include "./grammar/math.ne"
 @include "./grammar/booleanExpr.ne"
-
-@{%
-const n = (type, ...children) => ({ type, children });
-%}
 
 # ROOT RULE - the start of the grammar
 ######################################
 root          -> statement                      {% id %}
 
 
-# CALLS
-######################################
-expr          -> call                           {% id %}
-call          -> callStart ref "(" call_args ")" {% ([_drop, id, paren, callArgs]) => ({
-                                                  ast: 'call',
-                                                  children: [id, ...callArgs]
-                                                }) %}
-
 # drop stopwords
-callStart     -> "perform":? %questionMark:?    {% id %}
+callStart     -> "perform":? ("!" | "?"):?    {% id %}
 
 call_args     -> (",":? expr):*           {% ([args]) =>
                                                   args.map(a => a[1]) %}

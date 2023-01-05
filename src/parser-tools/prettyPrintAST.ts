@@ -23,13 +23,13 @@ export function prettyPrintAST(
       return `<${astNode.children[0]}>`;
     case "slotReference":
       return `[[${astNode.children[0]}]]`;
-    case "unaryBooleanExpr":
+    case "unaryExpr":
       const [op, arg] = astNode.children;
       return `(${op} ${prettyPrintAST(arg)})`;
     case "let":
       const [name, value] = astNode.children;
       return `let ${name.children[0]} = ${prettyPrintAST(value)}`;
-    case "booleanExpr":
+    case "binaryExpr":
       const [op2, left, right] = astNode.children;
       return `(${prettyPrintAST(left)} ${op2} ${prettyPrintAST(right)})`;
     case "list":

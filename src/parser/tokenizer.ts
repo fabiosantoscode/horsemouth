@@ -12,6 +12,7 @@ const tokens = {
   comma: ",",
   dot: ".",
   questionMark: /\?/,
+  exclamationMark: "!",
   percentReference: /"%[^%]+%"/,
   string: /"[^"]+"/,
   number: /\d+/,
@@ -23,10 +24,12 @@ const tokens = {
   rSquareBracket: "]",
   lList: "«",
   rList: "»",
+  math: /[+/*\-]/,
   innerBlockHack: {
     match: /:::innerblockhack\d+/,
     value: (s: string) => s.replace(":::innerblockhack", ""),
   } as moo.Rule,
+  error: moo.error,
 };
 
 export const getInnerBlockHack = (num: number) => `:::innerblockhack${num}`;

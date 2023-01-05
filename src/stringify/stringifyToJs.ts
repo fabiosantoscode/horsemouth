@@ -1,6 +1,8 @@
 import prettier from "prettier";
+import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
 import { walk } from "../parser-tools/walk";
 import { AlgorithmNode, getNodeSource } from "../parser/parse";
+import { cleanIdentifier } from "../utils/cleanIdentifier";
 
 let unnamedFunctionCount = 0;
 
@@ -100,13 +102,13 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
       const [obj, ...props] = node.children;
       return `${s(obj)}${props.map((prop) => `[${s(prop)}]`).join("")}`;
     }
-    case "booleanExpr": {
+    case "binaryExpr": {
       const [op, left, right] = node.children;
-      return `(${s(left)} ${booleanOp(op)} ${s(right)})`;
+      return `(${s(left)} ${operator(op)} ${s(right)})`;
     }
-    case "unaryBooleanExpr": {
+    case "unaryExpr": {
       const [op, expr] = node.children;
-      return `${booleanOp(op)} ${s(expr)}`;
+      return `${operator(op)} ${s(expr)}`;
     }
 
     // STAT
@@ -170,50 +172,31 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
     case "innerBlockHack": {
       throw new Error("Shouldn't be here");
     }
+    default: {
+      console.error(node);
+      throw new Error(`Unknown node type ${node && (node as any).ast}`);
+    }
   }
 }
 
-const booleanOps = {
+const operators = {
   and: "&&",
   or: "||",
   not: "!",
   equals: "===",
+  '-': '-',
+  '+': '+',
+  '*': '*',
+  '/': '/',
+  '%': '%',
+  '<': '<',
+  '>': '>',
 };
 
-const booleanOp = (op: string): string => {
-  if (!(op in booleanOps)) throw new Error(`Unknown boolean op ${op}`);
-  return (booleanOps as any)[op];
+const operator = (op: string): string => {
+  if (!(op in operators)) throw new Error(`Unknown operator ${op}`);
+  return (operators as any)[op];
 };
-
-const allJsKeywordsAndReservedWords = [
-  "abstract",
-  "arguments",
-  "await",
-  "boolean",
-  "break",
-  "byte",
-  "case",
-  "catch",
-  "char",
-  "class",
-  "const",
-  "continue",
-  "debugger",
-  "default",
-  "import",
-  "export",
-  "let",
-  "var",
-  "const",
-  "package",
-];
-const cleanIdentifier = (id: string) =>
-  id
-    .replaceAll(/[^a-zA-Z0-9_]+/g, "_")
-    .replaceAll(
-      new RegExp(`^(${allJsKeywordsAndReservedWords.join("|")})$`, "g"),
-      "$1_"
-    );
 
 const slotVarName = (slotName: string) => `slot_${cleanIdentifier(slotName)}`;
 

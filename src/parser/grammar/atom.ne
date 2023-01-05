@@ -7,7 +7,7 @@ const reservedWords = new Set(`
 `.split(/\n/g).join(' ').split(/\s+/g))
 %}
 
-expr          -> atom                           {% id %}
+# expr -> atom is in math.ne
 
 # LITERALS
 ######################################
@@ -55,8 +55,8 @@ dottedProperty-> lhsExceptDotted ("." lhsExceptDotted):+
                                                 {% ([lhs, props]) => ({
                                                   ast: 'dottedProperty',
                                                   children: [
-                                                    lhs[0],
-                                                    ...props.map(p => p[1])
+                                                    n(lhs, 'dotted property lhs'),
+                                                    ...props.map(p => n(p[1], 'dotted property rhs'))
                                                   ]
                                                 }) %}
 

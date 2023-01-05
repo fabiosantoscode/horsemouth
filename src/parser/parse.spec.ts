@@ -13,28 +13,39 @@ it("parse step using grammar", () => {
   );
 });
 
+it("can parse some math", () => {
+  expect(parseAlgorithmStep("set k to k + 1.")).toMatchInlineSnapshot(
+    `(set <k> (<k> + (number 1)))`
+  );
+  expect(
+    parseAlgorithmStep('if k is 1, then return "one".')
+  ).toMatchInlineSnapshot(
+    `(condition (<k> equals (number 1)) (return_ (string one)))`
+  );
+});
+
 it("parse whole algo using grammar", () => {
   // if `newtarget` is undefined, throw a TypeError exception
   expect(parseAlgorithm(alg)).toMatchInlineSnapshot(`
-[
-  (condition (<newtarget> equals <undefined>) (throw_ <typeerror>)),
-  let set = (call <ordinarycreatefromconstructor> <newtarget> (percentReference set.prototype) (List [[setdata]])),
-  (set <set>.[[setdata]] (List )),
-  (condition ((<iterable> equals <undefined>) or (<iterable> equals <null>)) (return_ <set>)),
-  let adder = (call <get> <set> (string add)),
-  (condition ((call <iscallable> <adder>) equals <false>) (throw_ <typeerror>)),
-  let iteratorrecord = (call <getiterator> <iterable>),
-  repeat: [
-    block: [
-        let next = (call <iteratorstep> <iteratorrecord>)
-        (condition (<next> equals <false>) (return_ <set>))
-        let nextvalue = (call <iteratorvalue> <next>)
-        let status = (call <completion> (call <call> <adder> <set> (List <nextvalue>)))
-        (call <ifabruptcloseiterator> <status> <iteratorrecord>)
-      ]
-  ],
-]
-`);
+    [
+      (condition (<newtarget> equals <undefined>) (throw_ <typeerror>)),
+      let set = (call <ordinarycreatefromconstructor> <newtarget> (percentReference set.prototype) (List [[setdata]])),
+      (set <set>.[[setdata]] (List )),
+      (condition ((<iterable> equals <undefined>) or (<iterable> equals <null>)) (return_ <set>)),
+      let adder = (call <get> <set> (string add)),
+      (condition ((call <iscallable> <adder>) equals <false>) (throw_ <typeerror>)),
+      let iteratorrecord = (call <getiterator> <iterable>),
+      repeat: [
+        block: [
+            let next = (call <iteratorstep> <iteratorrecord>)
+            (condition (<next> equals <false>) (return_ <set>))
+            let nextvalue = (call <iteratorvalue> <next>)
+            let status = (call <completion> (call <call> <adder> <set> (List <nextvalue>)))
+            (call <ifabruptcloseiterator> <status> <iteratorrecord>)
+          ]
+      ],
+    ]
+  `);
 });
 
 it("Weakset has", () => {
@@ -42,17 +53,17 @@ it("Weakset has", () => {
   const alg = document.children[0];
   console.log(alg.textContent);
   expect(parseAlgorithm(alg)).toMatchInlineSnapshot(`
-[
-  let s = <this>,
-  (call <requireinternalslot> <s> [[weaksetdata]]),
-  let entries = (typeCheck <list> <s>.[[weaksetdata]]),
-  (condition (not ((call <type> <value>) equals <object>)) (return_ <false>)),
-  (forEach e <entries> block: [
-    (condition ((not (<e> equals <empty>)) and ((call <samevalue> <e> <value>) equals <true>)) (return_ <true>))
-  ]),
-  (return_ <false>),
-]
-`);
+    [
+      let s = <this>,
+      (call <requireinternalslot> <s> [[weaksetdata]]),
+      let entries = (typeCheck <list> <s>.[[weaksetdata]]),
+      (condition (not ((call <type> <value>) equals <object>)) (return_ <false>)),
+      (forEach e <entries> block: [
+        (condition ((not (<e> equals <empty>)) and ((call <samevalue> <e> <value>) equals <true>)) (return_ <true>))
+      ]),
+      (return_ <false>),
+    ]
+  `);
 });
 
 function getSetConstructorSpecHtml() {
