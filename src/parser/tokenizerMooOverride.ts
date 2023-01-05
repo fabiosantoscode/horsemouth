@@ -11,13 +11,13 @@ import type { TokenType } from "./tokenizer";
 import type moo from "moo";
 
 export interface HorsemouthLexer extends moo.Lexer {
-    formatError(token: Token, message?: string): string;
-    next(): Token | undefined;
-    setState(state: string): void;
+  formatError(token: Token, message?: string): string;
+  next(): Token | undefined;
+  setState(state: string): void;
 
-    [Symbol.iterator](): Iterator<Token>;
+  [Symbol.iterator](): Iterator<Token>;
 }
 
 export interface Token extends moo.Token {
-    type?: TokenType | undefined;
+  type?: TokenType | undefined;
 }

@@ -9,34 +9,34 @@ const tokens = {
     match: /[ \n\xa0]+/,
     lineBreaks: true,
   },
-  comma: ',',
-  dot: '.',
+  comma: ",",
+  dot: ".",
   questionMark: /\?/,
   percentReference: /"%[^%]+%"/,
   string: /"[^"]+"/,
   number: /\d+/,
-  lParen: '(',
-  rParen: ')',
-  lSlotBrackets: '[[',
-  rSlotBrackets: ']]',
-  lSquareBracket: '[',
-  rSquareBracket: ']',
-  lList: '«',
-  rList: '»',
+  lParen: "(",
+  rParen: ")",
+  lSlotBrackets: "[[",
+  rSlotBrackets: "]]",
+  lSquareBracket: "[",
+  rSquareBracket: "]",
+  lList: "«",
+  rList: "»",
   innerBlockHack: {
     match: /:::innerblockhack\d+/,
-    value: (s: string) => s.replace(':::innerblockhack',''),
-  } as moo.Rule
-}
+    value: (s: string) => s.replace(":::innerblockhack", ""),
+  } as moo.Rule,
+};
 
-export const getInnerBlockHack = (num: number) => `:::innerblockhack${num}`
+export const getInnerBlockHack = (num: number) => `:::innerblockhack${num}`;
 
-export type TokenType = keyof typeof tokens
-export type TokenOfType<T extends TokenType> = moo.Token & { type: T }
-export const algorithmTokenizer = moo.compile(tokens) as HorsemouthLexer
-const _next = algorithmTokenizer.next
+export type TokenType = keyof typeof tokens;
+export type TokenOfType<T extends TokenType> = moo.Token & { type: T };
+export const algorithmTokenizer = moo.compile(tokens) as HorsemouthLexer;
+const _next = algorithmTokenizer.next;
 algorithmTokenizer.next = () => {
-  const token = _next.call(algorithmTokenizer)
-  if (token?.type === 'space') return algorithmTokenizer.next()
-  return token
-}
+  const token = _next.call(algorithmTokenizer);
+  if (token?.type === "space") return algorithmTokenizer.next();
+  return token;
+};

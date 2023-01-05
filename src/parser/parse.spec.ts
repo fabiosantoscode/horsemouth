@@ -1,17 +1,19 @@
-import { parseHTML } from "linkedom"
-import '../experiments'
-import { parseAlgorithmStep, parseAlgorithm } from "./parse"
+import { parseHTML } from "linkedom";
+import "../experiments";
+import { parseAlgorithmStep, parseAlgorithm } from "./parse";
 
-const { document } = parseHTML(getSetConstructorSpecHtml())
+const { document } = parseHTML(getSetConstructorSpecHtml());
 
-const alg = document.children[0]
+const alg = document.children[0];
 
-it('parse step using grammar', () => {
+it("parse step using grammar", () => {
   // if `newtarget` is undefined, throw a TypeError exception
-  expect(parseAlgorithmStep(alg.children[0].children[0])).toMatchInlineSnapshot(`(condition (<newtarget> equals <undefined>) (throw_ <typeerror>))`)
-})
+  expect(parseAlgorithmStep(alg.children[0].children[0])).toMatchInlineSnapshot(
+    `(condition (<newtarget> equals <undefined>) (throw_ <typeerror>))`
+  );
+});
 
-it('parse whole algo using grammar', () => {
+it("parse whole algo using grammar", () => {
   // if `newtarget` is undefined, throw a TypeError exception
   expect(parseAlgorithm(alg)).toMatchInlineSnapshot(`
 [
@@ -32,13 +34,13 @@ it('parse whole algo using grammar', () => {
       ]
   ],
 ]
-`)
-})
+`);
+});
 
-it('Weakset has', () => {
-  const { document } = parseHTML(getWeakSetHasSpecHtml())
-  const alg = document.children[0]
-  console.log(alg.textContent)
+it("Weakset has", () => {
+  const { document } = parseHTML(getWeakSetHasSpecHtml());
+  const alg = document.children[0];
+  console.log(alg.textContent);
   expect(parseAlgorithm(alg)).toMatchInlineSnapshot(`
 [
   let s = <this>,
@@ -50,8 +52,8 @@ it('Weakset has', () => {
   ]),
   (return_ <false>),
 ]
-`)
-})
+`);
+});
 
 function getSetConstructorSpecHtml() {
   return `
@@ -97,7 +99,7 @@ function getSetConstructorSpecHtml() {
         </li>
       </ol>
     </emu-alg>
-  `
+  `;
 }
 
 function getWeakSetHasSpecHtml() {
@@ -125,5 +127,5 @@ function getWeakSetHasSpecHtml() {
         <li>Return <emu-val>false</emu-val>. </li>
       </ol>
     </emu-alg>
-  `
+  `;
 }
