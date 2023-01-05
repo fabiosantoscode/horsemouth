@@ -21,7 +21,7 @@ const { document } = parseHTML(keyedCollections);
 
 const algs = document.querySelectorAll("emu-alg") as HTMLElement[];
 
-let toStringify = [] as AlgorithmWithMetadata[];
+const toStringify = [] as AlgorithmWithMetadata[];
 
 for (const alg of algs) {
   if (alg.closest("emu-note")) {

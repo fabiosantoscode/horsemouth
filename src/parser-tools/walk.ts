@@ -1,4 +1,5 @@
-import { AlgorithmNode } from "../parser/parse";
+import { AlgorithmNode, Algorithm } from '../parser/parse';
+import { isAlgorithmNode } from './isAlgorithmNode';
 
 export const walk = (
   node: AlgorithmNode | AlgorithmNode[],
@@ -7,9 +8,38 @@ export const walk = (
   if (Array.isArray(node)) {
     node.forEach((node) => walk(node, fn));
     return;
-  } else if (!node || typeof node !== "object") {
-    return;
+  } else {
+    node.children.forEach(child => {
+      if (isAlgorithmNode(node)) {
+        walk(child as AlgorithmNode, fn);
+      }
+    })
   }
-  if (Array.isArray(node.children)) walk(node.children, fn);
+
   fn(node);
+};
+
+export const mapAlgorithm = (
+  algo: Algorithm,
+  fn: (node: AlgorithmNode) => AlgorithmNode
+) => algo.map((node) => mapTree(node, fn));
+
+export const mapTree = (
+  algo: AlgorithmNode,
+  fn: (node: AlgorithmNode) => AlgorithmNode
+): AlgorithmNode => {
+  if (algo && algo.children) {
+    return fn({
+      ...algo,
+      children: algo.children.map((child) => {
+        if (isAlgorithmNode(child)) {
+          return mapTree(child, fn);
+        } else {
+          return child;
+        }
+      }),
+    } as AlgorithmNode)
+  } else {
+    throw new Error('unreachable')
+  }
 };

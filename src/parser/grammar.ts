@@ -22,9 +22,9 @@ let inGrammar = new Parser(nearleyGrammar)
   .finish()[0];
 
 // recursively find objects with .include strings, read the files, and replace them with the contents
-function replaceIncludes(grammar) {
+function replaceIncludes(grammar: any[]) {
   return grammar.flatMap((obj) => {
-    if (obj && obj.include) {
+    if (obj && typeof obj.include === "string") {
       const filename = obj.include;
       const contents = readFileSync(__dirname + "/" + filename, "utf8");
       return new Parser(nearleyGrammar).feed(contents).finish()[0];

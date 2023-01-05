@@ -1,12 +1,12 @@
 import assert from "assert";
-import { HTMLElement, HTMLLIElement, HTMLOListElement } from "linkedom";
+import { HTMLElement, HTMLOListElement } from "linkedom";
 import "../experiments";
 import { algorithmTokenizer, getInnerBlockHack } from "./tokenizer";
 
-import Grammar from "./grammar";
 import { Parser } from "nearley";
-import { HTMLAlgorithm } from "../html-parsing/findAlgorithms";
 import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
+import Grammar from "./grammar";
+import { mapTree } from "../parser-tools/walk";
 
 export type AlgorithmNode =
   | { ast: "block"; children: AlgorithmNode[] }
@@ -36,7 +36,7 @@ export type AlgorithmNode =
   | { ast: "set"; children: [AlgorithmNode, AlgorithmNode] }
   | { ast: "return_"; children: [AlgorithmNode] }
   | { ast: "throw_"; children: [AlgorithmNode] }
-  | { ast: "unknown"; children: (string | AlgorithmNode[])[] };
+  | { ast: "unknown"; children: (string | AlgorithmNode)[] };
 
 export type NodeOfType<T extends AlgorithmNode["ast"]> = Extract<
   AlgorithmNode,
@@ -45,16 +45,11 @@ export type NodeOfType<T extends AlgorithmNode["ast"]> = Extract<
 
 export type Algorithm = AlgorithmNode[];
 
-const nonEmptyText = (node: HTMLElement) =>
-  node.childNodes.filter(
-    (node) => node.tagName || node.textContent.trim() !== ""
-  );
-
 interface ParseOpts {
   allowUnknown?: boolean;
 }
 
-export function parseAlgorithm(node: HTMLElement, opts: ParseOpts): Algorithm {
+export function parseAlgorithm(node: HTMLElement, opts: ParseOpts = {}): Algorithm {
   assert.equal(node.tagName, "EMU-ALG", "algorithms are <EMU-ALG> elements");
   const steps = [...node.children[0].children];
   return steps.map((algoStep) => parseAlgorithmStep(algoStep, opts));
@@ -143,23 +138,6 @@ export function parseAlgorithmStep(
 const nodeSources = new WeakMap<AlgorithmNode, string>();
 export const getNodeSource = (node: AlgorithmNode) => nodeSources.get(node);
 
-const mapTree = (
-  algo: AlgorithmNode,
-  fn: (node: AlgorithmNode) => AlgorithmNode
-): AlgorithmNode => {
-  return fn({
-    ...algo,
-    children: algo.children.map((child) => {
-      if (Array.isArray(child)) {
-        return child.map((node) => mapTree(node, fn));
-      } else if (!child || typeof child !== "object") {
-        return child;
-      } else {
-        return mapTree(child, fn);
-      }
-    }),
-  });
-};
 
 /** plainly parse with our grammar and handle ambiguity errors */
 const justParse = (source = ""): [Error, null] | [null, AlgorithmNode] => {

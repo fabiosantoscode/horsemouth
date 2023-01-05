@@ -5,7 +5,7 @@ import { AlgorithmNode, getNodeSource } from "../parser/parse";
 let unnamedFunctionCount = 0;
 
 export interface AlgorithmWithMetadata {
-  algName: string;
+  algName?: string;
   headerComment?: string;
   algorithm: AlgorithmNode[];
 }
@@ -13,7 +13,7 @@ export interface AlgorithmWithMetadata {
 export function stringifyToJs(algorithms: AlgorithmWithMetadata[]) {
   unnamedFunctionCount = 0;
 
-  let slots = new Set();
+  const slots = new Set();
   for (const { algorithm } of algorithms) {
     walk(algorithm, (node) => {
       if (node.ast === "slotReference") {
