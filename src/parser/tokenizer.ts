@@ -26,7 +26,7 @@ const tokens = {
   percentReference: /"?%[^%]+%"?/u,
   wellKnownSymbol: /@@[a-z]+/u,
   string: /"[^"]+"/u,
-  number: /\d+/u,
+  number: /\d+(?:\.\d+)?/u,
   lParen: "(",
   rParen: ")",
   comparisonOps: /[<>≤≥=]/u,
@@ -36,7 +36,7 @@ const tokens = {
   rSquareBracket: "]",
   lList: "«",
   rList: "»",
-  math: /[+/*\-]/u,
+  math: /[+/*\-∞]/u,
   error: moo.error,
 };
 

@@ -83,6 +83,18 @@ it("can compare to the empty string", () => {
   ).toMatchInlineSnapshot(`let a = (<matchstr> equals (string ))`);
 });
 
+it("can parse numbers", () => {
+  expect(parseAlgorithmStep("let A be - ∞ 𝔽")).toMatchInlineSnapshot(
+    `let a = (- (float Infinity))`
+  );
+  expect(parseAlgorithmStep("let A be - 0 𝔽")).toMatchInlineSnapshot(
+    `let a = (- (float 0))`
+  );
+  expect(parseAlgorithmStep("let A be NaN")).toMatchInlineSnapshot(
+    `let a = <nan>`
+  );
+});
+
 it("parse whole algo using grammar", () => {
   // if `newtarget` is undefined, throw a TypeError exception
   expect(parseAlgorithmBlock(alg)).toMatchInlineSnapshot(`
@@ -123,11 +135,11 @@ it("can parse if/else which can go in 2 lines", () => {
     parseAlgorithmBlock([
       'If x is 1, then return "then".',
       'Else if x is 2, return "else 1".',
-      'Else, return "else".',
+      'Else, return "else 2".',
     ])
   ).toMatchInlineSnapshot(`
     block: [
-        (condition (<x> equals (number 1)) (return_ (string then)) (else (condition (<x> equals (number 2)) (return_ (string else 1))) (else (return_ (string else)))))
+        (condition (<x> equals (number 1)) (return_ (string then)) (else (condition (<x> equals (number 2)) (return_ (string else 1))) (else (return_ (string else 2)))))
       ]
   `);
 });
@@ -170,14 +182,14 @@ it("regexpbuiltinexec", () => {
         (repeatWhile (<matchsucceeded> equals <false>) block: [
         (condition (<lastindex> > <length>) block: [
         (condition ((<global> equals <true>) or (<sticky> equals <true>)) block: [
-        (unknown Perform ? Set ( R , "lastIndex" , + 0 𝔽 , true ) .)
+        (call <set> <r> (string lastindex) (+ (float 0)) <true>)
       ])
         (return_ <null>)
       ])
         let r = (call <matcher> <s> <lastindex>)
         (condition (<r> equals <failure>) block: [
         (condition (<sticky> equals <true>) block: [
-        (unknown Perform ? Set ( R , "lastIndex" , + 0 𝔽 , true ) .)
+        (call <set> <r> (string lastindex) (+ (float 0)) <true>)
         (return_ <null>)
       ])
         (set <lastindex> (call <advancestringindex> <s> <lastindex> <fullunicode>))

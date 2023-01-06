@@ -34,55 +34,61 @@ const algorithmHeadTokenizer = noSpaceTokenizer(
 export function getAlgorithmHead({
   section,
 }: Pick<HTMLAlgorithm, "section">): AlgorithmUsage {
-  const headTokens = h1Tokens(section);
+  const [headText, headTokens] = h1Tokens(section);
 
-  const cur = () => headTokens[0];
-  const next = () => headTokens.shift();
-  const expect = (type: string | undefined) => {
-    if (cur()?.type !== type)
-      throw new Error("expected " + type + ", got " + cur()?.type);
-    return next()!;
-  };
+  try {
+    const cur = () => headTokens[0];
+    const next = () => headTokens.shift();
+    const expect = (type: string | undefined) => {
+      if (cur()?.type !== type)
+        throw new Error("expected " + type + ", got " + cur()?.type);
+      return next()!;
+    };
 
-  let type: AlgorithmUsage["type"] = "function";
-  let rootName = Array.from(
-    (function* findNameParts() {
-      const firstWord = expect("word").value;
+    let type: AlgorithmUsage["type"] = "function";
+    let rootName = Array.from(
+      (function* findNameParts() {
+        const firstWord = expect("word").value;
 
-      if (firstWord === "get") {
-        type = "getter";
-      } else if (firstWord === "set") {
-        type = "setter";
-      } else {
-        yield firstWord;
-      }
-
-      while (1) {
-        const tok = next();
-        if (!tok || tok.type === "lParen") {
-          break;
-        }
-
-        if (tok.type === "lSquareBracket") {
-          expect("atAt");
-          yield "@@" + expect("word").value;
-          expect("rSquareBracket");
-        } else if (tok.type === "dot") {
-          // skip the dot
-        } else if (tok.type === "word") {
-          yield tok.value;
+        if (firstWord === "get") {
+          type = "getter";
+        } else if (firstWord === "set") {
+          type = "setter";
         } else {
-          throw new Error("unexpected token " + tok.type);
+          yield firstWord;
         }
-      }
-    })()
-  );
 
-  return {
-    type,
-    name: rootName,
-    args: parseArguments(type, expect, cur),
-  } as AlgorithmUsage;
+        while (1) {
+          const tok = next();
+          if (!tok || tok.type === "lParen") {
+            break;
+          }
+
+          if (tok.type === "lSquareBracket") {
+            expect("atAt");
+            yield "@@" + expect("word").value;
+            expect("rSquareBracket");
+          } else if (tok.type === "dot") {
+            // skip the dot
+          } else if (tok.type === "word") {
+            yield tok.value;
+          } else {
+            throw new Error("unexpected token " + tok.type);
+          }
+        }
+      })()
+    );
+
+    return {
+      type,
+      name: rootName,
+      args: parseArguments(type, expect, cur),
+    } as AlgorithmUsage;
+  } catch (error) {
+    console.log(headText);
+    console.log(headTokens);
+    throw error;
+  }
 }
 
 function parseArguments(
@@ -101,6 +107,9 @@ function parseArguments(
     const isOptional = cur().type === "lSquareBracket";
     if (isOptional) expect("lSquareBracket");
 
+    // ( regular_arg[ , optional_arg] )
+    if (cur().type === "comma") expect("comma");
+
     const argName = expect("word").value;
 
     args.push({
@@ -110,6 +119,7 @@ function parseArguments(
 
     if (isOptional) expect("rSquareBracket");
 
+    // ( regular_arg, [optional_arg] )
     if (cur().type === "comma") expect("comma");
   }
 
@@ -131,8 +141,6 @@ function h1Tokens(section: Element) {
   const headTokens = [
     ...algorithmHeadTokenizer.reset(header.textContent?.toLocaleLowerCase()),
   ];
-  console.log(header.textContent);
-  console.log(headTokens);
 
-  return headTokens;
+  return [header.textContent, headTokens] as const;
 }

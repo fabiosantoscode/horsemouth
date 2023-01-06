@@ -11,6 +11,12 @@ it("can parse a function", () => {
   expect(testHeader("foo()")).toMatchInlineSnapshot(`"function foo()"`);
 });
 
+it("can parse optional arguments", () => {
+  expect(
+    testHeader("ToPrimitive ( input [ , preferredType ] )")
+  ).toMatchInlineSnapshot(`"function toprimitive(input, preferredtype?)"`);
+});
+
 it("can parse a getter", () => {
   const parsed = testHeader("get RegExp.prototype.sticky");
 

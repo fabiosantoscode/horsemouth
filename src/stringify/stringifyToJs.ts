@@ -7,7 +7,10 @@ import { findWellKnownSymbols } from "../wellKnownSymbols";
 
 let unnamedFunctionCount = 0;
 
-export function stringifyToJs(algorithms: AlgorithmBlock[], document: Document) {
+export function stringifyToJs(
+  algorithms: AlgorithmBlock[],
+  document: Document
+) {
   unnamedFunctionCount = 0;
 
   const slots = new Set();
@@ -32,7 +35,9 @@ export function stringifyToJs(algorithms: AlgorithmBlock[], document: Document) 
 
   for (const wellKnownSymbol of findWellKnownSymbols(document)) {
     slots.add(
-      `const ${wellKnownSymbolVarName(wellKnownSymbol)} = Symbol('@@${wellKnownSymbol.replace('@@', '')}');`
+      `const ${wellKnownSymbolVarName(
+        wellKnownSymbol
+      )} = Symbol('@@${wellKnownSymbol.replace("@@", "")}');`
     );
   }
 
@@ -71,10 +76,12 @@ export function stringifyAlgorithmToJs({ usage, children }: AlgorithmBlock) {
   try {
     return prettier.format(fn, { parser: "babel" });
   } catch (e) {
-    console.error(fn)
+    console.error(fn);
     console.error((e as any).codeFrame);
-    console.error('------')
-    throw new Error('could not prettify. Bad syntax being returned from stringifyToJs most likely.')
+    console.error("------");
+    throw new Error(
+      "could not prettify. Bad syntax being returned from stringifyToJs most likely."
+    );
   }
 }
 
@@ -100,14 +107,24 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
     case "percentReference": {
       return percentVarName(node.children[0]);
     }
-    case 'wellKnownSymbol': {
-      return wellKnownSymbolVarName(node.children[0])
+    case "wellKnownSymbol": {
+      return wellKnownSymbolVarName(node.children[0]);
     }
     case "string": {
       return JSON.stringify(node.children[0]);
     }
     case "number": {
+      // TODO this is a "mathematical value" according to the spec
+      // check if any number referred to in the spec may not be
+      // representable as a JS double and then panic a little bit
+      // if that's the case.
       return node.children[0];
+    }
+    case "float": {
+      return node.children[0].toString();
+    }
+    case "bigint": {
+      return node.children[0] + "n";
     }
     case "call": {
       const [fname, ...args] = node.children;
@@ -152,11 +169,15 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
         if (${s(cond)}) {
             ${s(ifTrue)}
         }
-        ${elseClause ? `
+        ${
+          elseClause
+            ? `
             else {
               ${s(elseClause.children[0])}
             }
-        ` : ''}
+        `
+            : ""
+        }
       `;
     }
     case "forEach": {
@@ -209,7 +230,7 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
       );
     }
     case "comment": {
-      return `/* ${node.children[0].replaceAll(/\*\//g, '*\\/')} */`;
+      return `/* ${node.children[0].replaceAll(/\*\//g, "*\\/")} */`;
     }
     case "innerBlockHack": {
       throw new Error("Shouldn't be here");
@@ -249,4 +270,4 @@ const percentVarName = (percentName: string) =>
   `percent_${cleanIdentifier(percentName)}`;
 
 const wellKnownSymbolVarName = (symbolName: string) =>
-  `wellKnownSymbol_${cleanIdentifier(symbolName.replace('@@', ''))}`;
+  `wellKnownSymbol_${cleanIdentifier(symbolName.replace("@@", ""))}`;

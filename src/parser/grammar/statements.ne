@@ -13,7 +13,6 @@ statement    -> "set" lhs "to" expr             {% ([set, id, is, expr]) => ({
                                                 }) %}
 
 statement    -> call                            {% ([id]) => id %}
-statement    -> throw_                          {% ([id]) => id %}
 
 # LOOPS
 statement    -> "repeat" "," statement          {% ([repeat, comma, block]) => ({
@@ -34,7 +33,7 @@ statement    -> "for" "each" "element" ref "of" expr "," "do"  statement
                                                 }) %}
 
 
-# CONTROL FLOW
+# JUMPS
 statement    -> throw_                          {% id %}
 throw_       -> "throw" "a" ref "exception"     {% ([throw_, _, value]) =>
                                                   ({

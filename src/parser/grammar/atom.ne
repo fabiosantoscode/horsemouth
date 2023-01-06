@@ -3,7 +3,7 @@
 const reservedWords = new Set(`
   if then else let be is the of
   and or not TypeError exception
-  otherwise either while
+  otherwise either while NaN
 `.split(/\n/g).join(' ').split(/\s+/g))
 %}
 
@@ -17,12 +17,30 @@ literal       -> %string                        {% ([id]) => ({
                                                   ast: 'string',
                                                   children: [id.text.replaceAll(/["]/g, '')]
                                                 }) %}
-literal       -> %number                        {% ([id]) => ({
-                                                  ast: 'number',
-                                                  children: [Number(id.text)]
+
+literal       -> numericLiteral                 {% id %}
+literal       -> numericLiteral "𝔽"             {% ([num]) => n({
+                                                  ast: 'float',
+                                                  children: [Number(num.children[0])]
+                                                }) %}
+literal       -> numericLiteral "ℤ"             {% ([num]) => n({
+                                                  ast: 'bigint',
+                                                  children: [BigInt(num.children[0])]
                                                 }) %}
 
-literal       -> ("the" | "an") "empty" "string" {% ([]) => ({
+numericLiteral-> %number                        {% ([id]) => ({
+                                                  ast: 'number',
+                                                  children: [id.text]
+                                                }) %}
+numericLiteral-> "∞"                            {% id => ({
+                                                  ast: 'number',
+                                                  children: ["Infinity"]
+                                                }) %}
+numericLiteral-> "NaN"                          {% id => ({
+                                                  ast: 'number',
+                                                  children: ["NaN"]
+                                                }) %}
+numericLiteral-> ("the" | "an") "empty" "string" {% ([]) => ({
                                                   ast: 'string',
                                                   children: ['']
                                                 }) %}
@@ -71,12 +89,18 @@ atom          -> %wellKnownSymbol               {% ([id]) => ({
 
 # CALLS
 ######################################
-atom          -> call                                       {% id %}
-call          -> callStart lhs "(" call_args ")"            {% ([_drop, id, paren, callArgs]) => ({
-                                                              ast: 'call',
-                                                              children: [id, ...callArgs]
-                                                            }) %}
-# drop stopwords
-callStart     -> "perform":? ("!" | "?"):?                  {% id %}
+atom          -> call                           {% id %}
+call          -> callStart lhs call_args        {% ([_drop, id, callArgs]) => ({
+                                                  ast: 'call',
+                                                  children: [id, ...callArgs]
+                                                }) %}
 
-call_args     -> (",":? expr):*                             {% ([args]) => args.map(a => a[1]) %}
+# drop stopwords
+callStart     -> "perform":? ("!" | "?"):?      {% id %}
+
+call_args     -> "(" expr ("," expr):* ")"      {% ([paren, firstArg, args]) => [
+                                                  n(firstArg),
+                                                  ...args.map(a => n(a[1]))
+                                                ] %}
+
+call_args     -> "(" ")"                        {% () => [] %}

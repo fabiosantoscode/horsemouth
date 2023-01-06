@@ -1,24 +1,25 @@
+const symbolsCache = new Map();
 
-const symbolsCache = new Map()
-
-export const findWellKnownSymbols=(doc: Element | Document): string[] => {
+export const findWellKnownSymbols = (doc: Element | Document): string[] => {
   if (symbolsCache.has(doc)) {
-    return symbolsCache.get(doc)
+    return symbolsCache.get(doc);
   }
 
-  const sec = doc.querySelector('#sec-well-known-symbols')
+  const sec = doc.querySelector("#sec-well-known-symbols");
 
   if (!sec?.textContent) {
-    throw new Error('Well known symbols not found')
+    throw new Error("Well known symbols not found");
   }
 
-  const ret = [...sec.textContent.matchAll(/@@[a-z]+/gi)].map(([symbol]) => symbol)
+  const ret = [...sec.textContent.matchAll(/@@[a-z]+/gi)].map(
+    ([symbol]) => symbol
+  );
 
-  symbolsCache.set(doc, ret)
+  symbolsCache.set(doc, ret);
 
-  wellKnownSymbols = new Set(ret)
+  wellKnownSymbols = new Set(ret);
 
-  return ret
-}
+  return ret;
+};
 
-export let wellKnownSymbols = new Set<string>()
+export let wellKnownSymbols = new Set<string>();

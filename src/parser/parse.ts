@@ -40,7 +40,7 @@ export type AlgorithmNode =
   | { ast: "throw_"; children: [Expression] }
   | { ast: "unknown"; children: (string | AlgorithmNode)[] }
   | { ast: "innerBlockHack"; children: [string] }
-  | { ast: 'comment'; children: [string] }
+  | { ast: "comment"; children: [string] };
 
 export type ReferenceLike =
   | { ast: "reference"; children: [string] }
@@ -57,6 +57,8 @@ export type Expression =
   | { ast: "string"; children: [string] }
   | { ast: "hasSlot"; children: [Expression, ReferenceLike] }
   | { ast: "number"; children: [string] }
+  | { ast: "float"; children: [number] }
+  | { ast: "bigint"; children: [BigInt] }
   | { ast: "binaryExpr"; children: [string, Expression, Expression] }
   | { ast: "unaryExpr"; children: [string, Expression, Expression] }
   | { ast: "call"; children: [Expression, ...Expression[]] }
@@ -119,9 +121,9 @@ export function parseAlgorithmStep(
 
   if (/^note:/i.test(sourceText.trimStart())) {
     return {
-      ast: 'comment',
-      children: [sourceText]
-    }
+      ast: "comment",
+      children: [sourceText],
+    };
   }
 
   const getParsedBlockFromIndex = (index: number | string) => {
@@ -216,10 +218,6 @@ const justParse = (
   } catch (e) {
     return ["parseError", e as Error];
   }
-
-  // filter solutions that are the same as each other
-  const solutionsStrs = new Set(solutions.map((s) => JSON.stringify(s)));
-  solutions = [...solutionsStrs].map((s) => JSON.parse(s));
 
   switch (solutions.length) {
     case 0: {

@@ -5,7 +5,7 @@ import "../experiments";
 import { walk } from "../parser-tools/walk";
 import { AlgorithmBlock, parseAlgorithmBlock } from "../parser/parse";
 import { stringifyToJs } from "../stringify/stringifyToJs";
-import {findWellKnownSymbols} from '../wellKnownSymbols/index';
+import { findWellKnownSymbols } from "../wellKnownSymbols/index";
 
 // read ./keyed-collections.html
 const keyedCollections = fs.readFileSync(
@@ -15,7 +15,7 @@ const keyedCollections = fs.readFileSync(
 
 const { document } = parseHTML(keyedCollections);
 
-findWellKnownSymbols(document)
+findWellKnownSymbols(document);
 
 const clauses = [
   ...document.querySelectorAll(

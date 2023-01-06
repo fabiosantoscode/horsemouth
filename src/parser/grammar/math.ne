@@ -32,3 +32,7 @@ unaryExpr -> "-" atom                                       {% ([min, arg]) => (
                                                               ast: 'unaryExpr',
                                                               children: ['-', arg]
                                                             }) %}
+unaryExpr -> "+" atom                                       {% ([min, arg]) => ({
+                                                              ast: 'unaryExpr',
+                                                              children: ['+', arg]
+                                                            }) %}
