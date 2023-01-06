@@ -11,9 +11,19 @@ booleanExpr -> booleanExpr ("and" | "or") comparisonExpr   {% ([expr1, op, expr2
                                                     })
                                                   %}
 
+booleanExpr -> (comparisonExpr ","):+ ("and" | "or") comparisonExpr
+                                                  {% ([chain, [op], end], _, reject) => {
+                                                    const allExprs = [...chain, [end]]
+                                                      .map(e => n(e[0], 'chained comp'))
+                                                    if (allExprs.every(e => e.ast === 'binaryExpr')){
+                                                      return chainedBinaryOp(op.text, ...allExprs)
+                                                    }
+                                                    return reject
+                                                  } %}
+
+
 # COMPARISONS
-
-
+######################################
 
 comparisonExpr -> mathExpr                        {% id %}
 comparisonExpr -> comparisonExpr ("is" | "=") mathExpr

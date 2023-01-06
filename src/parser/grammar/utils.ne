@@ -30,4 +30,17 @@ const compare = (root, second, ...others) => {
   })
 }
 
+const chainedBinaryOp = (op, root, second, ...others) => {
+  if (others.length === 0) {
+    return n({
+      ast: 'binaryExpr',
+      children: [op, n(root), n(second)]
+    })
+  }
+  return n({
+    ast: 'binaryExpr',
+    children: [op, n(root), n(chainedBinaryOp(op, second, ...others))]
+  })
+}
+
 %}

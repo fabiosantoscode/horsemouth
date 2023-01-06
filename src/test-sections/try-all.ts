@@ -18,6 +18,13 @@ const { document } = parseHTML(keyedCollections);
 
 findWellKnownSymbols(document);
 
+/*
+const allClauses = [
+  ...document.querySelectorAll("#sec-abstract-operations emu-alg"),
+  ...document.querySelectorAll("#sec-abstract-operations ~ emu-clause emu-alg"),
+];
+*/
+
 const clauses = [
   ...document.querySelectorAll("#sec-abstract-operations emu-alg"),
   ...document.querySelectorAll(
@@ -27,7 +34,7 @@ const clauses = [
     // "#sec-keyed-collections emu-alg"
     // "#sec-structured-data emu-alg"
     // "#sec-control-abstraction-objects emu-alg"
-    "emu-alg"
+    "#sec-abstract-operations ~ emu-clause emu-alg"
   ),
 ].flatMap((algorithm) => {
   const clause = algorithm.closest("emu-clause");

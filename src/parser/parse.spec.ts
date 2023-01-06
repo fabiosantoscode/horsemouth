@@ -62,10 +62,17 @@ it("can parse symbol refs", () => {
 });
 
 it("can parse chained comparisons", () => {
-  expect(parseAlgorithmStep("if x is 1, 2, 3, or 4, then return true."))
+  expect(parseAlgorithmStep("if x is 1, 2, or 3, then return true."))
     .toMatchInlineSnapshot(`
-    (if ((<x> equals (number 1)) or ((<x> equals (number 2)) or ((<x> equals (number 3)) or (<x> equals (number 4)))))
+    (if ((<x> equals (number 1)) or ((<x> equals (number 2)) or (<x> equals (number 3))))
       then: (return_ <true>)
+    )
+  `);
+  expect(
+    parseAlgorithmStep("If n is NaN , n is +0 𝔽 , or n is -∞ 𝔽 , return n .")
+  ).toMatchInlineSnapshot(`
+    (if ((<n> equals <nan>) or ((<n> equals (+ (float 0))) or (<n> equals (- (float Infinity)))))
+      then: (return_ <n>)
     )
   `);
 });

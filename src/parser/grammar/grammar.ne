@@ -36,7 +36,7 @@ list          -> "a" "new" "empty" "list"       {% ([new_, empty, list]) => ({
 
 # GETTING CONTEXT
 
-expr          -> "the" "this" "value"           {% ([the, this_, value]) => ({
+expr          -> "the":? "this" "value"         {% () => ({
                                                   ast: 'reference',
                                                   children: ['this']
                                                 }) %}
