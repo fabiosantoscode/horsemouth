@@ -1,23 +1,20 @@
 
 @lexer tokenizer
 
-@include "./grammar/utils.ne"
-@include "./grammar/statements.ne"
-@include "./grammar/lhs.ne"
-@include "./grammar/atom.ne"
-@include "./grammar/math.ne"
-@include "./grammar/booleanExpr.ne"
+@include "./utils.ne"
+@include "./statements.ne"
+@include "./statements/assert.ne"
+@include "./statements/conditions.ne"
+@include "./lhs.ne"
+@include "./atom.ne"
+@include "./math.ne"
+@include "./booleanExpr.ne"
 
 # ROOT RULE - the start of the grammar
 ######################################
 root          -> statement                      {% id %}
 
 
-# drop stopwords
-callStart     -> "perform":? ("!" | "?"):?    {% id %}
-
-call_args     -> (",":? expr):*           {% ([args]) =>
-                                                  args.map(a => a[1]) %}
 
 # LISTS
 ######################################

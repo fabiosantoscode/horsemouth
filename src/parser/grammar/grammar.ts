@@ -4,7 +4,7 @@
 
 import { readFileSync } from "fs";
 import { Grammar, Parser } from "nearley";
-import { algorithmTokenizer } from "./tokenizer";
+import { algorithmTokenizer } from "../tokenizer";
 import assert from "assert";
 
 // @ts-ignore
@@ -18,7 +18,7 @@ import nearleyGrammar from "nearley/lib/nearley-language-bootstrapped";
 
 // Use nearley's grammar to parse our grammar
 let inGrammar = new Parser(nearleyGrammar)
-  .feed(readFileSync(__dirname + "/grammar/grammar.ne", "utf8"))
+  .feed(readFileSync(__dirname + "/grammar.ne", "utf8"))
   .finish()[0];
 
 // recursively find objects with .include strings, read the files, and replace them with the contents

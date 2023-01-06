@@ -3,11 +3,9 @@ import { parseHTML } from "linkedom";
 import path from "path";
 import "../experiments";
 import { walk } from "../parser-tools/walk";
-import { parseAlgorithmBlock } from "../parser/parse";
-import {
-  AlgorithmWithMetadata,
-  stringifyToJs,
-} from "../stringify/stringifyToJs";
+import { AlgorithmBlock, parseAlgorithmBlock } from "../parser/parse";
+import { stringifyToJs } from "../stringify/stringifyToJs";
+import {findWellKnownSymbols} from '../wellKnownSymbols/index';
 
 // read ./keyed-collections.html
 const keyedCollections = fs.readFileSync(
@@ -17,28 +15,54 @@ const keyedCollections = fs.readFileSync(
 
 const { document } = parseHTML(keyedCollections);
 
-const algs = document.querySelectorAll("emu-alg");
+findWellKnownSymbols(document)
 
-const toStringify = [] as AlgorithmWithMetadata[];
+const clauses = [
+  ...document.querySelectorAll(
+    "#sec-type-conversion emu-alg"
+    // "#sec-properties-of-the-regexp-prototype-object emu-alg"
+    // "#sec-operations-on-objects emu-alg"
+    // "#sec-map-objects emu-alg"
+    // "#sec-structured-data emu-alg"
+  ),
+].flatMap((algorithm) => {
+  const clause = algorithm.closest("emu-clause");
 
-for (const alg of algs) {
-  if (alg.closest("emu-note")) {
-    continue;
+  const howManyAlgorithmsInClause = [...(clause?.children ?? [])].filter(
+    (node) => node.tagName === "EMU-ALG"
+  ).length;
+
+  if (
+    algorithm.closest("emu-note") ||
+    !clause ||
+    !clause.id ||
+    algorithm.hasAttribute("example") ||
+    clause.hasAttribute("namespace") ||
+    clause.id.startsWith("await") ||
+    howManyAlgorithmsInClause !== 1
+  ) {
+    return [];
   }
-  const algName = (alg.querySelector("h1, h2, h3") ?? (alg.parentNode as Element))?.id as
-    | string
-    | undefined;
 
-  const algorithm = parseAlgorithmBlock(alg, { allowUnknown: true });
+  return [
+    {
+      section: clause,
+      algorithm,
+    },
+  ];
+});
 
-  toStringify.push({
-    headerComment: "// " + algName,
-    algName,
-    algorithm,
-  });
+const toStringify: AlgorithmBlock[] = [];
+
+for (const htmlAlg of clauses) {
+  const algorithm = parseAlgorithmBlock(htmlAlg, { allowUnknown: true });
+
+  toStringify.push(algorithm);
 }
 
-console.log(stringifyToJs(toStringify));
+const stringified = stringifyToJs(toStringify, document);
+
+fs.writeFileSync(__dirname + "/stringified.js", stringified);
 
 const unknownFrequencies = new Map<string, number>();
 const addUnknownFrequency = (unknownString: string) => {
@@ -47,18 +71,12 @@ const addUnknownFrequency = (unknownString: string) => {
     (unknownFrequencies.get(unknownString) ?? 0) + 1
   );
 };
-const top10UnknownFrequencies = () => {
-  const sorted = [...unknownFrequencies.entries()].sort(
-    ([, a], [, b]) => b - a
-  );
-  return sorted.slice(0, 10);
-};
 
 let unknownCount = 0;
 let functionsWithoutUnknown = 0;
 let functionsWithUnknown = 0;
 let functionsWithEveryStatementUnknown = 0;
-for (const { algorithm } of toStringify) {
+for (const algorithm of toStringify) {
   let unknownCountHere = 0;
   walk(algorithm, (node) => {
     if (node.ast === "unknown") {
@@ -107,5 +125,12 @@ for (const [title, contents] of Object.entries({
   console.log(`${title}: ${contents}`);
 }
 
-console.log("Top 10 unknowns:");
-console.log(top10UnknownFrequencies());
+console.log("Top unknowns:");
+console.log(
+  (() => {
+    const sorted = [...unknownFrequencies.entries()].sort(
+      ([, a], [, b]) => b - a
+    );
+    return sorted.slice(0, 10);
+  })()
+);

@@ -1,34 +1,30 @@
 
 # STATEMENTS
 ######################################
-statement    -> "if" expr "," statement         {% ([, expr1, , expr2]) => ({
-                                                  ast: 'condition',
-                                                  children: [expr1, expr2]
-                                                }) %}
 
-statement    -> "if" expr "," "then" statement  {% ([, expr1, , , expr2]) => ({
-                                                  ast: 'condition',
-                                                  children: [expr1, expr2]
-                                                }) %}
-
-statement    -> "let" ref "be" expr "."         {% ([let_, id, be, expr]) => ({
+statement    -> "let" ref "be" expr             {% ([let_, id, be, expr]) => ({
                                                   ast: 'let',
                                                   children: [id, expr]
                                                 }) %}
 
-statement    -> "set" lhs "to" expr "."         {% ([set, id, is, expr]) => ({
+statement    -> "set" lhs "to" expr             {% ([set, id, is, expr]) => ({
                                                   ast: 'set',
                                                   children: [id, expr]
                                                 }) %}
 
-statement    -> call "."                        {% ([id]) => id %}
-statement    -> return_ "."                     {% ([id]) => id %}
-statement    -> throw_ "."                      {% ([id]) => id %}
+statement    -> call                            {% ([id]) => id %}
+statement    -> throw_                          {% ([id]) => id %}
 
 # LOOPS
 statement    -> "repeat" "," statement          {% ([repeat, comma, block]) => ({
                                                   ast: 'repeat',
                                                   children: [block]
+                                                }) %}
+
+statement    -> "repeat" "," "while" expr "," statement
+                                                {% ([repeat, comma, while_, expr, comma2, block]) => ({
+                                                  ast: 'repeatWhile',
+                                                  children: [expr, n(block)]
                                                 }) %}
 
 statement    -> "for" "each" "element" ref "of" expr "," "do"  statement
@@ -47,8 +43,7 @@ throw_       -> "throw" "a" ref "exception"     {% ([throw_, _, value]) =>
                                                   })
                                                 %}
 
-statement    -> return_                        {% id %}
-return_      -> "return" expr                  {% ([return_, value]) =>
+statement    -> "return" expr                   {% ([return_, value]) =>
                                                   ({
                                                     ast: 'return_',
                                                     children: [value]

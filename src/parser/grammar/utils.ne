@@ -12,4 +12,9 @@ const n = (ostensiblyNode, context = '') => {
   return ostensiblyNode
 }
 
+const boolNot = (ostensiblyNode) => n({
+  ast: 'unaryExpr',
+  children: ['not', n(ostensiblyNode)]
+})
+
 %}

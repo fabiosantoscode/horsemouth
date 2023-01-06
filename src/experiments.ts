@@ -26,7 +26,7 @@ const getTopLevel = () => {
   );
 
   const children = [
-    ...(document).querySelector("#spec-container")!.children,
+    ...document.querySelector("#spec-container")!.children,
   ].filter((child) => child.tagName.startsWith("EMU-"));
 
   return children;

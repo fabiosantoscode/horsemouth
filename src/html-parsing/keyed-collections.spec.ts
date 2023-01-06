@@ -27,7 +27,7 @@ it("can grab the kind of method in an algo", () => {
           "isOptional": true,
         },
       ],
-      "name": "Set",
+      "name": "set",
       "type": "function",
     }
   `);

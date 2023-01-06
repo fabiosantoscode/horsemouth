@@ -2,8 +2,8 @@
 @{%
 const reservedWords = new Set(`
   if then else let be is the of
-  and or not a TypeError exception
-  otherwise either
+  and or not TypeError exception
+  otherwise either while
 `.split(/\n/g).join(' ').split(/\s+/g))
 %}
 
@@ -22,6 +22,10 @@ literal       -> %number                        {% ([id]) => ({
                                                   children: [Number(id.text)]
                                                 }) %}
 
+literal       -> ("the" | "an") "empty" "string" {% ([]) => ({
+                                                  ast: 'string',
+                                                  children: ['']
+                                                }) %}
 
 # REFERENCES TO THINGS
 ######################################
@@ -60,3 +64,19 @@ dottedProperty-> lhsExceptDotted ("." lhsExceptDotted):+
                                                   ]
                                                 }) %}
 
+atom          -> %wellKnownSymbol               {% ([id]) => ({
+                                                  ast: 'wellKnownSymbol',
+                                                  children: [id.text]
+                                                }) %}
+
+# CALLS
+######################################
+atom          -> call                                       {% id %}
+call          -> callStart lhs "(" call_args ")"            {% ([_drop, id, paren, callArgs]) => ({
+                                                              ast: 'call',
+                                                              children: [id, ...callArgs]
+                                                            }) %}
+# drop stopwords
+callStart     -> "perform":? ("!" | "?"):?                  {% id %}
+
+call_args     -> (",":? expr):*                             {% ([args]) => args.map(a => a[1]) %}

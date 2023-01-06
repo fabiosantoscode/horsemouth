@@ -32,11 +32,3 @@ unaryExpr -> "-" atom                                       {% ([min, arg]) => (
                                                               ast: 'unaryExpr',
                                                               children: ['-', arg]
                                                             }) %}
-
-# CALLS
-######################################
-atom          -> call                           {% id %}
-call          -> callStart lhs "(" call_args ")" {% ([_drop, id, paren, callArgs]) => ({
-                                                  ast: 'call',
-                                                  children: [id, ...callArgs]
-                                                }) %}

@@ -3,8 +3,11 @@ import { getInnerBlockHack } from "../parser/tokenizer";
 import { cleanIdentifier } from "../utils/cleanIdentifier";
 import { getOnly } from "../utils/getOnly";
 import { isHtmlTag } from "./htmlUtils";
+import { HTMLAlgorithm } from "./findAlgorithms";
+import { AlgorithmUsage, getAlgorithmHead } from "./AlgorithmHead";
 
 export interface AlgorithmBlockFromHtml {
+  usage?: AlgorithmUsage;
   steps: AlgorithmStepFromHtml[];
 }
 export type AlgorithmStepFromHtml = {
@@ -12,23 +15,55 @@ export type AlgorithmStepFromHtml = {
   blockReferences: AlgorithmBlockFromHtml[];
 };
 
+let errors = 0;
+setTimeout(() => {
+  if (errors && typeof globalThis.describe === "undefined")
+    console.log("algorithm head errors", errors);
+  errors = 0;
+});
 export const getAlgorithmBlockFromHtml = (
-  node: Element | AlgorithmBlockFromHtml
+  node: Element | HTMLAlgorithm | AlgorithmBlockFromHtml | string[]
 ): AlgorithmBlockFromHtml => {
   // for testing
-  if ((node as AlgorithmBlockFromHtml).steps) return node as AlgorithmBlockFromHtml;
+  if (Array.isArray(node)) {
+    return {
+      steps: node.map((s) => ({
+        sourceText: s,
+        blockReferences: [],
+      })),
+    };
+  }
 
-  if (isHtmlTag(node, "EMU-ALG")) {
-    node = getOnly(node.children)
+  if ((node as AlgorithmBlockFromHtml).steps)
+    return node as AlgorithmBlockFromHtml;
+
+  let usage: AlgorithmUsage | undefined;
+  let algorithmNode: Element;
+
+  if ((node as any).algorithm) {
+    algorithmNode = (node as HTMLAlgorithm).algorithm;
+    try {
+      usage = getAlgorithmHead(node as HTMLAlgorithm);
+    } catch (e) {
+      errors++;
+      console.log("error getting algorithm head", e);
+      console.log("at ", (node as HTMLAlgorithm).algorithm.outerHTML);
+    }
+  } else {
+    algorithmNode = node as Element;
+  }
+
+  if (isHtmlTag(algorithmNode, "EMU-ALG")) {
+    algorithmNode = getOnly(algorithmNode.children);
   }
 
   assert.equal(
-    (node as any).tagName,
+    algorithmNode.tagName,
     "OL",
     "algorithm blocks are <OL> elements"
   );
 
-  const steps = [...(node as HTMLOListElement).children].flatMap((child) => {
+  const steps = [...algorithmNode.children].flatMap((child) => {
     if (child.tagName === "LI") {
       return [getAlgorithmStepFromHtml(child)];
     }
@@ -38,7 +73,7 @@ export const getAlgorithmBlockFromHtml = (
     return [];
   });
 
-  return { steps };
+  return { usage, steps };
 };
 
 export const getAlgorithmStepFromHtml = (
@@ -72,8 +107,8 @@ export const getAlgorithmStepFromHtml = (
       if (child.tagName === "EMU-XREF" && child.getAttribute("aoid")) {
         return [cleanIdentifier(child.getAttribute("aoid") || "")];
       } else {
-        const text = child.textContent?.trim()
-        return text ? [text] : []
+        const text = child.textContent?.trim();
+        return text ? [text] : [];
       }
     })
     .join(" ");

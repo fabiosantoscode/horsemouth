@@ -6,43 +6,62 @@ import {
   AlgorithmBlockFromHtml,
   AlgorithmStepFromHtml,
   getAlgorithmBlockFromHtml,
-  getAlgorithmStepFromHtml
+  getAlgorithmStepFromHtml,
 } from "../html-parsing/getAlgorithmFromHtml";
 import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
 import { mapTree } from "../parser-tools/walk";
-import Grammar from "./grammar";
+import Grammar from "./grammar/grammar";
+import { AlgorithmUsage } from "../html-parsing/AlgorithmHead";
+import { HTMLAlgorithm } from "../html-parsing/findAlgorithms";
 
-export type AlgorithmBlock = { ast: "block"; sourceBlock: AlgorithmBlockFromHtml, children: AlgorithmNode[] }
+export type AlgorithmBlock = {
+  ast: "block";
+  usage?: AlgorithmUsage;
+  children: AlgorithmNode[];
+};
+
+export type ElseNode = { ast: "else"; children: [AlgorithmNode] };
 
 export type AlgorithmNode =
+  | Expression
   | AlgorithmBlock
-  | { ast: "innerBlockHack"; children: [string] }
+  | { ast: "assert"; children: [Expression] }
   | { ast: "repeat"; children: [AlgorithmNode] }
+  | { ast: "repeatWhile"; children: [Expression, AlgorithmNode] }
   | { ast: "forEach"; children: [string, AlgorithmNode, AlgorithmNode] }
-  | { ast: "block"; children: AlgorithmNode[] }
-  | { ast: "string"; children: [string] }
-  | { ast: "number"; children: [string] }
+  | {
+      ast: "condition";
+      children: [AlgorithmNode, AlgorithmNode, ...ElseNode[]];
+    }
+  | ElseNode
+  | { ast: "let"; children: [ReferenceLike, Expression] }
+  | { ast: "set"; children: [Lhs, Expression] }
+  | { ast: "return_"; children: [Expression] }
+  | { ast: "throw_"; children: [Expression] }
+  | { ast: "unknown"; children: (string | AlgorithmNode)[] }
+  | { ast: "innerBlockHack"; children: [string] }
+  | { ast: 'comment'; children: [string] }
+
+export type ReferenceLike =
   | { ast: "reference"; children: [string] }
   | { ast: "percentReference"; children: [string] }
   | { ast: "slotReference"; children: [string] }
-  | { ast: "dottedProperty"; children: [AlgorithmNode, ...AlgorithmNode[]] }
-  | { ast: "binaryExpr"; children: [string, AlgorithmNode, AlgorithmNode] }
-  | {
-      ast: "unaryExpr";
-      children: [string, AlgorithmNode, AlgorithmNode];
-    }
-  | { ast: "call"; children: [AlgorithmNode, ...AlgorithmNode[]] }
-  | { ast: "list"; children: AlgorithmNode[] }
-  | { ast: "typeCheck"; children: [AlgorithmNode, AlgorithmNode] }
-  | {
-      ast: "condition";
-      children: [AlgorithmNode, AlgorithmNode, AlgorithmNode | undefined];
-    }
-  | { ast: "let"; children: [AlgorithmNode, AlgorithmNode] }
-  | { ast: "set"; children: [AlgorithmNode, AlgorithmNode] }
-  | { ast: "return_"; children: [AlgorithmNode] }
-  | { ast: "throw_"; children: [AlgorithmNode] }
-  | { ast: "unknown"; children: (string | AlgorithmNode)[] };
+  | { ast: "wellKnownSymbol"; children: [string] };
+
+export type Lhs =
+  | ReferenceLike
+  | { ast: "dottedProperty"; children: [ReferenceLike, ...ReferenceLike[]] };
+
+export type Expression =
+  | Lhs
+  | { ast: "string"; children: [string] }
+  | { ast: "hasSlot"; children: [Expression, ReferenceLike] }
+  | { ast: "number"; children: [string] }
+  | { ast: "binaryExpr"; children: [string, Expression, Expression] }
+  | { ast: "unaryExpr"; children: [string, Expression, Expression] }
+  | { ast: "call"; children: [Expression, ...Expression[]] }
+  | { ast: "list"; children: Expression[] }
+  | { ast: "typeCheck"; children: [Expression, Expression] };
 
 export type NodeOfType<T extends AlgorithmNode["ast"]> = Extract<
   AlgorithmNode,
@@ -56,17 +75,39 @@ interface ParseOpts {
 }
 
 export function parseAlgorithmBlock(
-  node: Element | AlgorithmBlockFromHtml,
-  opts: ParseOpts = {},
+  node: Element | HTMLAlgorithm | AlgorithmBlockFromHtml | string[],
+  opts: ParseOpts = {}
 ): AlgorithmBlock {
-  const sourceBlock = getAlgorithmBlockFromHtml(node)
+  const { usage, steps } = getAlgorithmBlockFromHtml(node);
 
-  const steps = sourceBlock.steps;
   return {
-    ast: 'block',
-    sourceBlock,
-    children: steps.map((algoStep) => parseAlgorithmStep(algoStep, opts))
+    ast: "block",
+    usage,
+    children: combineIfElse(
+      steps.map((algoStep) => parseAlgorithmStep(algoStep, opts))
+    ),
   };
+}
+
+/** if/else statements come in multiple steps but let's fold them into the if right here. */
+function combineIfElse(steps: AlgorithmNode[]) {
+  return steps.reduce((acc, cur) => {
+    let prev = acc[acc.length - 1];
+    if (cur.ast === "else") {
+      if (prev?.ast === "condition" || prev?.ast === "unknown") {
+        if (prev.children[2]?.ast === "else") {
+          prev = prev.children[2];
+        }
+        if (prev.children[2]?.ast === "else") {
+          throw new Error("else after else");
+        }
+        prev.children.push(cur);
+        return acc;
+      }
+      throw new Error("else without if");
+    }
+    return [...acc, cur];
+  }, [] as AlgorithmNode[]);
 }
 
 export function parseAlgorithmStep(
@@ -76,7 +117,14 @@ export function parseAlgorithmStep(
   // We're going to be replacing inner blocks with fake tokens, so we need to keep track of them
   const { sourceText, blockReferences } = getAlgorithmStepFromHtml(node);
 
-  const getParsedBlockFromIndex = (index: number|string) => {
+  if (/^note:/i.test(sourceText.trimStart())) {
+    return {
+      ast: 'comment',
+      children: [sourceText]
+    }
+  }
+
+  const getParsedBlockFromIndex = (index: number | string) => {
     const block = blockReferences[Number(index)];
     if (!block) {
       throw new Error(`invalid inner block hack: ${index}`);
@@ -105,7 +153,7 @@ export function parseAlgorithmStep(
       children: (
         [...algorithmTokenizer.reset(sourceText)].map((tok) => {
           if (tok.type === "innerBlockHack") {
-            return getParsedBlockFromIndex((tok.value));
+            return getParsedBlockFromIndex(tok.value);
           }
           return tok.text;
         }) as AlgorithmNode[]
@@ -139,7 +187,7 @@ export function parseAlgorithmStep(
   } else {
     returnedAst = mapTree(parsed, (node) => {
       if (node.ast === "innerBlockHack") {
-        return getParsedBlockFromIndex(node.children[0])
+        return getParsedBlockFromIndex(node.children[0]);
       }
       return node;
     });
@@ -162,10 +210,16 @@ const justParse = (
   const parser = new Parser(Grammar, { lexer: algorithmTokenizer });
   let solutions;
   try {
-    solutions = parser.feed(source.toLocaleLowerCase()).finish();
+    solutions = parser
+      .feed(source.toLocaleLowerCase().trimEnd().replace(/\.$/, ""))
+      .finish();
   } catch (e) {
     return ["parseError", e as Error];
   }
+
+  // filter solutions that are the same as each other
+  const solutionsStrs = new Set(solutions.map((s) => JSON.stringify(s)));
+  solutions = [...solutionsStrs].map((s) => JSON.parse(s));
 
   switch (solutions.length) {
     case 0: {

@@ -1,22 +1,17 @@
 import prettier from "prettier";
 import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
 import { walk } from "../parser-tools/walk";
-import {AlgorithmNode, getNodeSource, AlgorithmBlock} from '../parser/parse';
+import { AlgorithmNode, getNodeSource, AlgorithmBlock } from "../parser/parse";
 import { cleanIdentifier } from "../utils/cleanIdentifier";
+import { findWellKnownSymbols } from "../wellKnownSymbols";
 
 let unnamedFunctionCount = 0;
 
-export interface AlgorithmWithMetadata {
-  algName?: string;
-  headerComment?: string;
-  algorithm: AlgorithmBlock;
-}
-
-export function stringifyToJs(algorithms: AlgorithmWithMetadata[]) {
+export function stringifyToJs(algorithms: AlgorithmBlock[], document: Document) {
   unnamedFunctionCount = 0;
 
   const slots = new Set();
-  for (const { algorithm } of algorithms) {
+  for (const algorithm of algorithms) {
     walk(algorithm.children, (node) => {
       if (node.ast === "slotReference") {
         slots.add(
@@ -35,6 +30,12 @@ export function stringifyToJs(algorithms: AlgorithmWithMetadata[]) {
     });
   }
 
+  for (const wellKnownSymbol of findWellKnownSymbols(document)) {
+    slots.add(
+      `const ${wellKnownSymbolVarName(wellKnownSymbol)} = Symbol('@@${wellKnownSymbol.replace('@@', '')}');`
+    );
+  }
+
   return (
     [...slots].sort().join("\n") +
     "\n\n// The good stuff\n\n" +
@@ -42,21 +43,39 @@ export function stringifyToJs(algorithms: AlgorithmWithMetadata[]) {
   );
 }
 
-export function stringifyAlgorithmToJs({
-  headerComment,
-  algName,
-  algorithm,
-}: AlgorithmWithMetadata) {
+export function stringifyAlgorithmToJs({ usage, children }: AlgorithmBlock) {
   const fname =
-    cleanIdentifier(algName ?? "") ||
+    cleanIdentifier(usage?.name.join(".") ?? "") ||
     `TODO_unnamedFunction${++unnamedFunctionCount}`;
-  const uglyCode = `
-${headerComment ?? `/**` + algName + `*/`}
-function ${fname}() {
-${algorithm.children.map((node) => "    " + stringifyAlgorithmStatement(node)).join("\n")}
-}
-`;
-  return prettier.format(uglyCode, { parser: "babel" });
+
+  const leadingComment = `
+    /**
+     * ${usage?.name.join(".")}
+     * ${JSON.stringify(usage)}
+     **/`;
+  const functionHead = `
+    function ${fname}
+    (
+      ${usage?.args.map((a) => cleanIdentifier(a.argName)).join(", ") ?? ""}
+    )
+  `;
+  const functionBody = `
+    {
+      ${children
+        .map((node) => "    " + stringifyAlgorithmStatement(node))
+        .join("\n")}
+    }
+  `;
+
+  const fn = leadingComment + functionHead + functionBody;
+  try {
+    return prettier.format(fn, { parser: "babel" });
+  } catch (e) {
+    console.error(fn)
+    console.error((e as any).codeFrame);
+    console.error('------')
+    throw new Error('could not prettify. Bad syntax being returned from stringifyToJs most likely.')
+  }
 }
 
 // wrapper to add comment wit source text
@@ -80,6 +99,9 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
     }
     case "percentReference": {
       return percentVarName(node.children[0]);
+    }
+    case 'wellKnownSymbol': {
+      return wellKnownSymbolVarName(node.children[0])
     }
     case "string": {
       return JSON.stringify(node.children[0]);
@@ -110,8 +132,12 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
       const [op, expr] = node.children;
       return `${operator(op)} ${s(expr)}`;
     }
+    case "hasSlot": {
+      const [thing, slot] = node.children;
+      return `HAS_SLOT(${s(thing)}, ${s(slot)})`;
+    }
 
-    // STAT
+    // STATEMENTS
     case "let": {
       return `var ${cleanIdentifier(s(node.children[0]))} = ${s(
         node.children[1]
@@ -121,16 +147,17 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
       return `${s(node.children[0])} = ${s(node.children[1])}`;
     }
     case "condition": {
-      const [cond, ifTrue, ifFalse] = node.children;
-      return `if (${s(cond)}) {
-        ${s(ifTrue)}
-    }${
-      ifFalse
-        ? ` else {
-        ${s(ifFalse)}
-    }`
-        : ""
-    }`;
+      const [cond, ifTrue, elseClause] = node.children;
+      return `
+        if (${s(cond)}) {
+            ${s(ifTrue)}
+        }
+        ${elseClause ? `
+            else {
+              ${s(elseClause.children[0])}
+            }
+        ` : ''}
+      `;
     }
     case "forEach": {
       const [item, list, body] = node.children;
@@ -144,6 +171,9 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
     case "throw_": {
       return `throw ${s(node.children[0])};`;
     }
+    case "assert": {
+      return `ASSERT(${s(node.children[0])});`;
+    }
     case "block": {
       return `{
         ${node.children.map(s).join("\n")}
@@ -155,9 +185,18 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
         ${s(body)}
     }`;
     }
+    case "repeatWhile": {
+      const [expr, body] = node.children;
+      return `while (${s(expr)}) {
+        ${s(body)}
+    }`;
+    }
+    case "else":
+    // Else is here because we couldn't join it with the previous if
+    // Usually this means the previous if was parsed as "unknown"
     case "unknown": {
       return (
-        "TODO(" +
+        "UNKNOWN(" +
         node.children
           .flatMap((child) => {
             if (typeof child === "string") return JSON.stringify(child);
@@ -169,12 +208,16 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
         ")"
       );
     }
+    case "comment": {
+      return `/* ${node.children[0].replaceAll(/\*\//g, '*\\/')} */`;
+    }
     case "innerBlockHack": {
       throw new Error("Shouldn't be here");
     }
     default: {
-      console.error(node);
-      throw new Error(`Unknown node type ${node && (node as any).ast}`);
+      throw new Error(
+        `stringifyToJs: Unknown node type ${node && (node as any).ast}`
+      );
     }
   }
 }
@@ -184,13 +227,15 @@ const operators = {
   or: "||",
   not: "!",
   equals: "===",
-  '-': '-',
-  '+': '+',
-  '*': '*',
-  '/': '/',
-  '%': '%',
-  '<': '<',
-  '>': '>',
+  "-": "-",
+  "+": "+",
+  "*": "*",
+  "/": "/",
+  "%": "%",
+  "<": "<",
+  ">": ">",
+  "<=": "<=",
+  ">=": ">=",
 };
 
 const operator = (op: string): string => {
@@ -202,3 +247,6 @@ const slotVarName = (slotName: string) => `slot_${cleanIdentifier(slotName)}`;
 
 const percentVarName = (percentName: string) =>
   `percent_${cleanIdentifier(percentName)}`;
+
+const wellKnownSymbolVarName = (symbolName: string) =>
+  `wellKnownSymbol_${cleanIdentifier(symbolName.replace('@@', ''))}`;
