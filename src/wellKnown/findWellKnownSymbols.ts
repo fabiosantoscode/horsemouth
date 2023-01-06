@@ -8,12 +8,16 @@ export const findWellKnownSymbols = (doc: Element | Document): string[] => {
   const sec = doc.querySelector("#sec-well-known-symbols");
 
   if (!sec?.textContent) {
-    throw new Error("Well known symbols not found");
+    throw new Error("Well known symbols not found at #sec-well-known-symbols");
   }
 
-  const ret = [...sec.textContent.matchAll(/@@[a-z]+/gi)].map(
+  const ret = [...sec.textContent.matchAll(/@@[a-z0-9]+/gi)].map(
     ([symbol]) => symbol
   );
+
+  if (!ret.length) {
+    throw new Error("Well known symbols not found at #sec-well-known-symbols");
+  }
 
   symbolsCache.set(doc, ret);
 

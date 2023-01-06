@@ -1,10 +1,12 @@
 import moo from "moo";
 import type { HTMLAlgorithm } from "../html-parsing/findAlgorithms";
 import { noSpaceTokenizer } from "../parser-tools/noSpaceTokenizer";
+import { getDefined } from "../utils/getDefined";
 
 interface AlgorithmArgs {
   argName: string;
   isOptional: boolean;
+  isVarArgs: boolean;
 }
 
 export type AlgorithmUsage =
@@ -15,6 +17,8 @@ export type AlgorithmUsage =
   | { type: "getter"; name: string[]; args: [] }
   | { type: "setter"; name: string[]; args: AlgorithmArgs[] };
 
+const ellipsis = "…";
+
 const algorithmHeadTokenizer = noSpaceTokenizer(
   moo.compile({
     word: /[a-zA-Z_$][a-zA-Z0-9_$:.]*/,
@@ -24,6 +28,7 @@ const algorithmHeadTokenizer = noSpaceTokenizer(
     rParen: ")",
     lBrace: "{",
     rBrace: "}",
+    ellipsis,
     atAt: "@@",
     lSquareBracket: "[",
     rSquareBracket: "]",
@@ -34,7 +39,12 @@ const algorithmHeadTokenizer = noSpaceTokenizer(
 export function getAlgorithmHead({
   section,
 }: Pick<HTMLAlgorithm, "section">): AlgorithmUsage {
-  const [headText, headTokens] = h1Tokens(section);
+  const [headText, headTokens] = h1Tokens(section, (unfiltered) =>
+    unfiltered
+      .toLocaleLowerCase()
+      // "p1, p2, … , pn" is found in the head of some algorithms
+      .replace(/p1\s*,\s*p2\s*,\s*…\s*,\s*pn/, "…p")
+  );
 
   try {
     const cur = () => headTokens[0];
@@ -110,11 +120,15 @@ function parseArguments(
     // ( regular_arg[ , optional_arg] )
     if (cur().type === "comma") expect("comma");
 
+    const isVarArgs = cur().type === "ellipsis";
+    if (isVarArgs) expect("ellipsis");
+
     const argName = expect("word").value;
 
     args.push({
       argName,
       isOptional,
+      isVarArgs,
     });
 
     if (isOptional) expect("rSquareBracket");
@@ -128,7 +142,7 @@ function parseArguments(
   return args;
 }
 
-function h1Tokens(section: Element) {
+function h1Tokens(section: Element, filter = (s: string) => s) {
   section.querySelector(".secnum")?.remove();
 
   let header: Element | null = section;
@@ -139,7 +153,7 @@ function h1Tokens(section: Element) {
     throw new Error("could not find algorithm <h1> in " + section.outerHTML);
   }
   const headTokens = [
-    ...algorithmHeadTokenizer.reset(header.textContent?.toLocaleLowerCase()),
+    ...algorithmHeadTokenizer.reset(filter(getDefined(header.textContent))),
   ];
 
   return [header.textContent, headTokens] as const;

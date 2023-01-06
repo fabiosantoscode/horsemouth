@@ -25,7 +25,7 @@ const tokens = {
   exclamationMark: "!",
   percentReference: /"?%[^%]+%"?/u,
   wellKnownSymbol: /@@[a-z]+/u,
-  string: /"[^"]+"/u,
+  string: /"[^"]*"/u,
   number: /\d+(?:\.\d+)?/u,
   lParen: "(",
   rParen: ")",

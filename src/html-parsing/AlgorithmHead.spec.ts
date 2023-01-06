@@ -11,6 +11,12 @@ it("can parse a function", () => {
   expect(testHeader("foo()")).toMatchInlineSnapshot(`"function foo()"`);
 });
 
+it("can parse varargs", () => {
+  expect(
+    testHeader("AsyncFunction ( p1, p2, … , pn, body )")
+  ).toMatchInlineSnapshot(`"function asyncfunction(...p, body)"`);
+});
+
 it("can parse optional arguments", () => {
   expect(
     testHeader("ToPrimitive ( input [ , preferredType ] )")
@@ -45,6 +51,8 @@ const testHeader = (header: string) => {
   });
 
   return `${type} ${name}(${args
-    .map(({ isOptional, argName }) => (isOptional ? `${argName}?` : argName))
+    .map(({ isOptional, isVarArgs, argName }) =>
+      isVarArgs ? `...${argName}` : isOptional ? `${argName}?` : argName
+    )
     .join(", ")})`;
 };

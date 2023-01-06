@@ -87,6 +87,8 @@ atom          -> %wellKnownSymbol               {% ([id]) => ({
                                                   children: [id.text]
                                                 }) %}
 
+atom          -> ("the" "value" "of":?) atom    {% ([redundant, id]) => id %}
+
 # CALLS
 ######################################
 atom          -> call                           {% id %}

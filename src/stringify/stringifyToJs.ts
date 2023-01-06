@@ -3,7 +3,8 @@ import { walk } from "../parser-tools/walk";
 import { AlgorithmBlock, AlgorithmNode } from "../parser/ast";
 import { getNodeSource } from "../parser/parse";
 import { cleanIdentifier } from "../utils/cleanIdentifier";
-import { findWellKnownSymbols } from "../wellKnownSymbols";
+import { findWellKnownIntrinsics } from "../wellKnown/findWellKnownIntrinsics";
+import { findWellKnownSymbols } from "../wellKnown/findWellKnownSymbols";
 
 let unnamedFunctionCount = 0;
 
@@ -25,7 +26,7 @@ export function stringifyToJs(
       }
       if (node.ast === "percentReference") {
         slots.add(
-          `const ${percentVarName(node.children[0])} = Symbol('%${
+          `const ${wellKnownIntrinsicVarName(node.children[0])} = Symbol('%${
             node.children[0]
           }%');`
         );
@@ -38,6 +39,14 @@ export function stringifyToJs(
       `const ${wellKnownSymbolVarName(
         wellKnownSymbol
       )} = Symbol('@@${wellKnownSymbol.replace("@@", "")}');`
+    );
+  }
+
+  for (const wellKnownIntrinsic of findWellKnownIntrinsics(document)) {
+    slots.add(
+      `const ${wellKnownIntrinsicVarName(
+        wellKnownIntrinsic
+      )} = Symbol('%${wellKnownIntrinsic.replaceAll(/%/g, "")}%');`
     );
   }
 
@@ -105,7 +114,7 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
       return slotVarName(node.children[0]);
     }
     case "percentReference": {
-      return percentVarName(node.children[0]);
+      return wellKnownIntrinsicVarName(node.children[0]);
     }
     case "wellKnownSymbol": {
       return wellKnownSymbolVarName(node.children[0]);
@@ -266,8 +275,8 @@ const operator = (op: string): string => {
 
 const slotVarName = (slotName: string) => `slot_${cleanIdentifier(slotName)}`;
 
-const percentVarName = (percentName: string) =>
-  `percent_${cleanIdentifier(percentName)}`;
+const wellKnownIntrinsicVarName = (percentName: string) =>
+  `intrinsic_${cleanIdentifier(percentName.replaceAll("%", ""))}`;
 
 const wellKnownSymbolVarName = (symbolName: string) =>
   `wellKnownSymbol_${cleanIdentifier(symbolName.replace("@@", ""))}`;

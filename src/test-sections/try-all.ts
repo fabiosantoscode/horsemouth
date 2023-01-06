@@ -6,7 +6,7 @@ import { walk } from "../parser-tools/walk";
 import { AlgorithmBlock } from "../parser/ast";
 import { parseAlgorithmBlock } from "../parser/parse";
 import { stringifyToJs } from "../stringify/stringifyToJs";
-import { findWellKnownSymbols } from "../wellKnownSymbols/index";
+import { findWellKnownSymbols } from "../wellKnown/findWellKnownSymbols";
 
 // read ./keyed-collections.html
 const keyedCollections = fs.readFileSync(
@@ -19,12 +19,15 @@ const { document } = parseHTML(keyedCollections);
 findWellKnownSymbols(document);
 
 const clauses = [
+  ...document.querySelectorAll("#sec-abstract-operations emu-alg"),
   ...document.querySelectorAll(
     // "#sec-type-conversion emu-alg"
     // "#sec-properties-of-the-regexp-prototype-object emu-alg"
     // "#sec-operations-on-objects emu-alg"
-    "#sec-map-objects emu-alg"
+    // "#sec-keyed-collections emu-alg"
     // "#sec-structured-data emu-alg"
+    // "#sec-control-abstraction-objects emu-alg"
+    "emu-alg"
   ),
 ].flatMap((algorithm) => {
   const clause = algorithm.closest("emu-clause");

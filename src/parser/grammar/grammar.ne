@@ -7,6 +7,7 @@
 @include "./statements/conditions.ne"
 @include "./lhs.ne"
 @include "./atom.ne"
+@include "./types.ne"
 @include "./math.ne"
 @include "./booleanExpr.ne"
 
