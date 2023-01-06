@@ -1,4 +1,4 @@
-import { AlgorithmNode, Algorithm } from "../parser/parse";
+import { Algorithm, AlgorithmNode } from "../parser/ast";
 import { isAlgorithmNode } from "./isAlgorithmNode";
 
 export const walk = (

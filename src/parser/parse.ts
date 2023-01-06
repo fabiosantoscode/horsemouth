@@ -11,66 +11,8 @@ import {
 import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
 import { mapTree } from "../parser-tools/walk";
 import Grammar from "./grammar/grammar";
-import { AlgorithmUsage } from "../html-parsing/AlgorithmHead";
 import { HTMLAlgorithm } from "../html-parsing/findAlgorithms";
-
-export type AlgorithmBlock = {
-  ast: "block";
-  usage?: AlgorithmUsage;
-  children: AlgorithmNode[];
-};
-
-export type ElseNode = { ast: "else"; children: [AlgorithmNode] };
-
-export type AlgorithmNode =
-  | Expression
-  | AlgorithmBlock
-  | { ast: "assert"; children: [Expression] }
-  | { ast: "repeat"; children: [AlgorithmNode] }
-  | { ast: "repeatWhile"; children: [Expression, AlgorithmNode] }
-  | { ast: "forEach"; children: [string, AlgorithmNode, AlgorithmNode] }
-  | {
-      ast: "condition";
-      children: [AlgorithmNode, AlgorithmNode, ...ElseNode[]];
-    }
-  | ElseNode
-  | { ast: "let"; children: [ReferenceLike, Expression] }
-  | { ast: "set"; children: [Lhs, Expression] }
-  | { ast: "return_"; children: [Expression] }
-  | { ast: "throw_"; children: [Expression] }
-  | { ast: "unknown"; children: (string | AlgorithmNode)[] }
-  | { ast: "innerBlockHack"; children: [string] }
-  | { ast: "comment"; children: [string] };
-
-export type ReferenceLike =
-  | { ast: "reference"; children: [string] }
-  | { ast: "percentReference"; children: [string] }
-  | { ast: "slotReference"; children: [string] }
-  | { ast: "wellKnownSymbol"; children: [string] };
-
-export type Lhs =
-  | ReferenceLike
-  | { ast: "dottedProperty"; children: [ReferenceLike, ...ReferenceLike[]] };
-
-export type Expression =
-  | Lhs
-  | { ast: "string"; children: [string] }
-  | { ast: "hasSlot"; children: [Expression, ReferenceLike] }
-  | { ast: "number"; children: [string] }
-  | { ast: "float"; children: [number] }
-  | { ast: "bigint"; children: [BigInt] }
-  | { ast: "binaryExpr"; children: [string, Expression, Expression] }
-  | { ast: "unaryExpr"; children: [string, Expression, Expression] }
-  | { ast: "call"; children: [Expression, ...Expression[]] }
-  | { ast: "list"; children: Expression[] }
-  | { ast: "typeCheck"; children: [Expression, Expression] };
-
-export type NodeOfType<T extends AlgorithmNode["ast"]> = Extract<
-  AlgorithmNode,
-  { ast: T }
->;
-
-export type Algorithm = AlgorithmNode[];
+import { AlgorithmBlock, AlgorithmNode, NodeOfType } from "./ast";
 
 interface ParseOpts {
   allowUnknown?: boolean;
@@ -97,19 +39,47 @@ function combineIfElse(steps: AlgorithmNode[]) {
     let prev = acc[acc.length - 1];
     if (cur.ast === "else") {
       if (prev?.ast === "condition" || prev?.ast === "unknown") {
-        if (prev.children[2]?.ast === "else") {
-          prev = prev.children[2];
-        }
-        if (prev.children[2]?.ast === "else") {
-          throw new Error("else after else");
-        }
-        prev.children.push(cur);
+        pushIntoInnermostElse(prev, cur);
         return acc;
       }
       throw new Error("else without if");
     }
-    return [...acc, cur];
+    acc.push(cur);
+    return acc;
   }, [] as AlgorithmNode[]);
+}
+
+// (if then) -> (if then {else})
+// (if then (else (if then))) -> (if then (else (if then {else})))
+function pushIntoInnermostElse(
+  conditionLike: NodeOfType<"condition" | "unknown">,
+  child: NodeOfType<"else">
+) {
+  if (conditionLike.ast === "unknown") {
+    conditionLike.children.push({
+      ast: "unknown",
+      children: ["else", child],
+    });
+    return;
+  }
+
+  const lastChild = conditionLike.children[2];
+  // There's a slot for "else"
+  if (lastChild === undefined) {
+    conditionLike.children.push(child);
+    return;
+  }
+
+  if (
+    lastChild.ast === "else" &&
+    (lastChild.children[0].ast === "condition" ||
+      lastChild.children[0].ast === "unknown")
+  ) {
+    pushIntoInnermostElse(lastChild.children[0], child);
+    return;
+  }
+
+  throw new Error("invalid if/else structure");
 }
 
 export function parseAlgorithmStep(

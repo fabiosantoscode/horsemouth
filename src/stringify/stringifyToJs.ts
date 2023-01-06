@@ -1,7 +1,7 @@
 import prettier from "prettier";
-import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
 import { walk } from "../parser-tools/walk";
-import { AlgorithmNode, getNodeSource, AlgorithmBlock } from "../parser/parse";
+import { AlgorithmBlock, AlgorithmNode } from "../parser/ast";
+import { getNodeSource } from "../parser/parse";
 import { cleanIdentifier } from "../utils/cleanIdentifier";
 import { findWellKnownSymbols } from "../wellKnownSymbols";
 

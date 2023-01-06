@@ -17,4 +17,17 @@ const boolNot = (ostensiblyNode) => n({
   children: ['not', n(ostensiblyNode)]
 })
 
+const compare = (root, second, ...others) => {
+  if (others.length === 0) {
+    return n({
+      ast: 'binaryExpr',
+      children: ['equals', n(root), n(second)]
+    })
+  }
+  return n({
+    ast: 'binaryExpr',
+    children: ['or', n(compare(root, second)), n(compare(root, ...others))]
+  })
+}
+
 %}

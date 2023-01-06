@@ -13,13 +13,12 @@ booleanExpr -> booleanExpr ("and" | "or") comparisonExpr   {% ([expr1, op, expr2
 
 # COMPARISONS
 
+
+
 comparisonExpr -> mathExpr                        {% id %}
 comparisonExpr -> comparisonExpr ("is" | "=") mathExpr
                                                   {% ([expr1, is, expr2]) =>
-                                                    ({
-                                                      ast: 'binaryExpr',
-                                                      children: ['equals', expr1, n(expr2)]
-                                                    })
+                                                    compare(expr1, expr2)
                                                   %}
 
 comparisonExpr -> comparisonExpr "is" "not" mathExpr
@@ -46,6 +45,15 @@ comparisonExpr -> comparisonExpr "is" "either" mathExpr "or" mathExpr
                                                         }
                                                       ]
                                                     })
+                                                  %}
+
+comparisonExpr -> comparisonExpr "is" (mathExpr ","):+ "or" mathExpr
+                                                  {% ([expr1, is, exprs, or, expr2]) =>
+                                                    compare(
+                                                      expr1,
+                                                      ...exprs.map(([mathExpr]) => n(mathExpr)),
+                                                      n(expr2),
+                                                    )
                                                   %}
 
 comparisonExpr -> comparisonExpr "is" "neither" mathExpr "nor" mathExpr

@@ -8,9 +8,12 @@ const alg = document.children[0];
 
 it("parse step using grammar", () => {
   // if `newtarget` is undefined, throw a TypeError exception
-  expect(parseAlgorithmStep(alg.children[0].children[0])).toMatchInlineSnapshot(
-    `(condition (<newtarget> equals <undefined>) (throw_ <typeerror>))`
-  );
+  expect(parseAlgorithmStep(alg.children[0].children[0]))
+    .toMatchInlineSnapshot(`
+    (if (<newtarget> equals <undefined>)
+      then: (throw_ <typeerror>)
+    )
+  `);
 });
 
 it("can parse variable assignments", () => {
@@ -25,11 +28,12 @@ it("can parse some math", () => {
   expect(parseAlgorithmStep("set k to k + 1.")).toMatchInlineSnapshot(
     `(set <k> (<k> + (number 1)))`
   );
-  expect(
-    parseAlgorithmStep('if k is 1, then return "one".')
-  ).toMatchInlineSnapshot(
-    `(condition (<k> equals (number 1)) (return_ (string one)))`
-  );
+  expect(parseAlgorithmStep('if k is 1, then return "one".'))
+    .toMatchInlineSnapshot(`
+    (if (<k> equals (number 1))
+      then: (return_ (string one))
+    )
+  `);
 });
 
 it("can parse comparisons", () => {
@@ -44,8 +48,8 @@ it("can parse comparisons", () => {
     })
   ).toMatchInlineSnapshot(`
     (repeatWhile (<n> <= <ncaptures>) block: [
-        (call <uwu>)
-      ])
+      (call <uwu>)
+    ])
   `);
 });
 
@@ -57,14 +61,25 @@ it("can parse symbol refs", () => {
   );
 });
 
+it("can parse chained comparisons", () => {
+  expect(parseAlgorithmStep("if x is 1, 2, 3, or 4, then return true."))
+    .toMatchInlineSnapshot(`
+    (if ((<x> equals (number 1)) or ((<x> equals (number 2)) or ((<x> equals (number 3)) or (<x> equals (number 4)))))
+      then: (return_ <true>)
+    )
+  `);
+});
+
 it("can parse conditions", () => {
   expect(
     parseAlgorithmStep(
       'If SameValue ( R , %RegExp.prototype% ) is true , return "(?:)" .'
     )
-  ).toMatchInlineSnapshot(
-    `(condition ((call <samevalue> <r> (percentReference regexp.prototype)) equals <true>) (return_ (string (?:))))`
-  );
+  ).toMatchInlineSnapshot(`
+    (if ((call <samevalue> <r> (percentReference regexp.prototype)) equals <true>)
+      then: (return_ (string (?:)))
+    )
+  `);
 });
 
 it("works with internal slots", () => {
@@ -72,9 +87,11 @@ it("works with internal slots", () => {
     parseAlgorithmStep(
       "If R does not have an [[ OriginalFlags ]] internal slot , return 0"
     )
-  ).toMatchInlineSnapshot(
-    `(condition (not (hasSlot <r> [[originalflags]])) (return_ (number 0)))`
-  );
+  ).toMatchInlineSnapshot(`
+    (if (not (hasSlot <r> [[originalflags]]))
+      then: (return_ (number 0))
+    )
+  `);
 });
 
 it("can compare to the empty string", () => {
@@ -99,23 +116,31 @@ it("parse whole algo using grammar", () => {
   // if `newtarget` is undefined, throw a TypeError exception
   expect(parseAlgorithmBlock(alg)).toMatchInlineSnapshot(`
     block: [
-        (condition (<newtarget> equals <undefined>) (throw_ <typeerror>))
-        let set = (call <ordinarycreatefromconstructor> <newtarget> (percentReference set.prototype) (List [[setdata]]))
-        (set <set>.[[setdata]] (List ))
-        (condition ((<iterable> equals <undefined>) or (<iterable> equals <null>)) (return_ <set>))
-        let adder = (call <get> <set> (string add))
-        (condition ((call <iscallable> <adder>) equals <false>) (throw_ <typeerror>))
-        let iteratorrecord = (call <getiterator> <iterable>)
-        repeat: [
-            block: [
-                let next = (call <iteratorstep> <iteratorrecord>)
-                (condition (<next> equals <false>) (return_ <set>))
-                let nextvalue = (call <iteratorvalue> <next>)
-                let status = (call <completion> (call <call> <adder> <set> (List <nextvalue>)))
-                (call <ifabruptcloseiterator> <status> <iteratorrecord>)
-              ]
-          ]
+      (if (<newtarget> equals <undefined>)
+        then: (throw_ <typeerror>)
+      )
+      let set = (call <ordinarycreatefromconstructor> <newtarget> (percentReference set.prototype) (List [[setdata]]))
+      (set <set>.[[setdata]] (List ))
+      (if ((<iterable> equals <undefined>) or (<iterable> equals <null>))
+        then: (return_ <set>)
+      )
+      let adder = (call <get> <set> (string add))
+      (if ((call <iscallable> <adder>) equals <false>)
+        then: (throw_ <typeerror>)
+      )
+      let iteratorrecord = (call <getiterator> <iterable>)
+      repeat: [
+        block: [
+          let next = (call <iteratorstep> <iteratorrecord>)
+          (if (<next> equals <false>)
+            then: (return_ <set>)
+          )
+          let nextvalue = (call <iteratorvalue> <next>)
+          let status = (call <completion> (call <call> <adder> <set> (List <nextvalue>)))
+          (call <ifabruptcloseiterator> <status> <iteratorrecord>)
+        ]
       ]
+    ]
   `);
 });
 
@@ -127,8 +152,11 @@ it("can parse if/else which can go in 2 lines", () => {
     ])
   ).toMatchInlineSnapshot(`
     block: [
-        (condition (<x> equals (number 1)) (return_ (string then)) (else (return_ (string else))))
-      ]
+      (if (<x> equals (number 1))
+        then: (return_ (string then))
+        else: (return_ (string else))
+      )
+    ]
   `);
 
   expect(
@@ -139,8 +167,14 @@ it("can parse if/else which can go in 2 lines", () => {
     ])
   ).toMatchInlineSnapshot(`
     block: [
-        (condition (<x> equals (number 1)) (return_ (string then)) (else (condition (<x> equals (number 2)) (return_ (string else 1))) (else (return_ (string else 2)))))
-      ]
+      (if (<x> equals (number 1))
+        then: (return_ (string then))
+        else: (if (<x> equals (number 2))
+          then: (return_ (string else 1))
+          else: (return_ (string else 2))
+        )
+      )
+    ]
   `);
 });
 
@@ -149,15 +183,19 @@ it("Weakset has", () => {
   const alg = document.children[0];
   expect(parseAlgorithmBlock(alg)).toMatchInlineSnapshot(`
     block: [
-        let s = <this>
-        (call <requireinternalslot> <s> [[weaksetdata]])
-        let entries = (typeCheck <list> <s>.[[weaksetdata]])
-        (condition (not ((call <type> <value>) equals <object>)) (return_ <false>))
-        (forEach e <entries> block: [
-        (condition ((not (<e> equals <empty>)) and ((call <samevalue> <e> <value>) equals <true>)) (return_ <true>))
+      let s = <this>
+      (call <requireinternalslot> <s> [[weaksetdata]])
+      let entries = (typeCheck <list> <s>.[[weaksetdata]])
+      (if (not ((call <type> <value>) equals <object>))
+        then: (return_ <false>)
+      )
+      (forEach e <entries> block: [
+        (if ((not (<e> equals <empty>)) and ((call <samevalue> <e> <value>) equals <true>))
+          then: (return_ <true>)
+        )
       ])
-        (return_ <false>)
-      ]
+      (return_ <false>)
+    ]
   `);
 });
 
@@ -168,76 +206,97 @@ it("regexpbuiltinexec", () => {
   expect(parseAlgorithmBlock(alg, { allowUnknown: true }))
     .toMatchInlineSnapshot(`
     block: [
-        (unknown Assert : R is an initialized RegExp instance .)
-        (assert ((call <type> <s>) equals <string>))
-        (unknown Let length be the number of code units in S .)
-        let lastindex = (call <ℝ> (call <tolength> (call <get> <r> (string lastindex))))
-        let flags = <r>.[[originalflags]]
-        (unknown If flags contains "g" , let global be true ; else let global be false .)
-        (unknown If flags contains "y" , let sticky be true ; else let sticky be false .)
-        (condition ((<global> equals <false>) and (<sticky> equals <false>)) (set <lastindex> (number 0)))
-        let matcher = <r>.[[regexpmatcher]]
-        (unknown If flags contains "u" , let fullUnicode be true ; else let fullUnicode be false .)
-        let matchsucceeded = <false>
-        (repeatWhile (<matchsucceeded> equals <false>) block: [
-        (condition (<lastindex> > <length>) block: [
-        (condition ((<global> equals <true>) or (<sticky> equals <true>)) block: [
-        (call <set> <r> (string lastindex) (+ (float 0)) <true>)
-      ])
-        (return_ <null>)
-      ])
+      (unknown Assert : R is an initialized RegExp instance .)
+      (assert ((call <type> <s>) equals <string>))
+      (unknown Let length be the number of code units in S .)
+      let lastindex = (call <ℝ> (call <tolength> (call <get> <r> (string lastindex))))
+      let flags = <r>.[[originalflags]]
+      (unknown If flags contains "g" , let global be true ; else let global be false .)
+      (unknown If flags contains "y" , let sticky be true ; else let sticky be false .)
+      (if ((<global> equals <false>) and (<sticky> equals <false>))
+        then: (set <lastindex> (number 0))
+      )
+      let matcher = <r>.[[regexpmatcher]]
+      (unknown If flags contains "u" , let fullUnicode be true ; else let fullUnicode be false .)
+      let matchsucceeded = <false>
+      (repeatWhile (<matchsucceeded> equals <false>) block: [
+        (if (<lastindex> > <length>)
+          then: block: [
+            (if ((<global> equals <true>) or (<sticky> equals <true>))
+              then: block: [
+                (call <set> <r> (string lastindex) (+ (float 0)) <true>)
+              ]
+            )
+            (return_ <null>)
+          ]
+        )
         let r = (call <matcher> <s> <lastindex>)
-        (condition (<r> equals <failure>) block: [
-        (condition (<sticky> equals <true>) block: [
-        (call <set> <r> (string lastindex) (+ (float 0)) <true>)
-        (return_ <null>)
+        (if (<r> equals <failure>)
+          then: block: [
+            (if (<sticky> equals <true>)
+              then: block: [
+                (call <set> <r> (string lastindex) (+ (float 0)) <true>)
+                (return_ <null>)
+              ]
+            )
+            (set <lastindex> (call <advancestringindex> <s> <lastindex> <fullunicode>))
+          ]
+          else: block: [
+            (unknown Assert : r is a State .)
+            (set <matchsucceeded> <true>)
+          ]
+        )
       ])
-        (set <lastindex> (call <advancestringindex> <s> <lastindex> <fullunicode>))
-      ] (else block: [
-        (unknown Assert : r is a State .)
-        (set <matchsucceeded> <true>)
-      ]))
-      ])
-        (unknown Let e be r 's endIndex value.)
-        (condition (<fullunicode> equals <true>) block: [
-        (unknown e is an index into the Input character list , derived from S , matched by matcher . Let eUTF be the smallest index into S that corresponds to the character at element e of Input . If e is greater than or equal to the number of elements in Input , then eUTF is the number of code units in S .)
-        (set <e> <eutf>)
-      ])
-        (condition ((<global> equals <true>) or (<sticky> equals <true>)) block: [
-        (call <set> <r> (string lastindex) (call <𝔽> <e>) <true>)
-      ])
-        (unknown Let n be the number of elements in r 's captures List . (This is the same value as 22.2.2.1 's NcapturingParens .))
-        (unknown Assert : n < 2 32 - 1 .)
-        let a = (call <arraycreate> (<n> + (number 1)))
-        (unknown Assert : The mathematical value of A 's "length" property is n + 1.)
-        (call <createdatapropertyorthrow> <a> (string index) (call <𝔽> <lastindex>))
-        (call <createdatapropertyorthrow> <a> (string input) <s>)
-        (unknown Let matchedSubstr be the substring of S from lastIndex to e .)
-        (call <createdatapropertyorthrow> <a> (string 0) <matchedsubstr>)
-        (unknown If R contains any GroupName , then block: [
+      (unknown Let e be r 's endIndex value.)
+      (if (<fullunicode> equals <true>)
+        then: block: [
+          (unknown e is an index into the Input character list , derived from S , matched by matcher . Let eUTF be the smallest index into S that corresponds to the character at element e of Input . If e is greater than or equal to the number of elements in Input , then eUTF is the number of code units in S .)
+          (set <e> <eutf>)
+        ]
+      )
+      (if ((<global> equals <true>) or (<sticky> equals <true>))
+        then: block: [
+          (call <set> <r> (string lastindex) (call <𝔽> <e>) <true>)
+        ]
+      )
+      (unknown Let n be the number of elements in r 's captures List . (This is the same value as 22.2.2.1 's NcapturingParens .))
+      (unknown Assert : n < 2 32 - 1 .)
+      let a = (call <arraycreate> (<n> + (number 1)))
+      (unknown Assert : The mathematical value of A 's "length" property is n + 1.)
+      (call <createdatapropertyorthrow> <a> (string index) (call <𝔽> <lastindex>))
+      (call <createdatapropertyorthrow> <a> (string input) <s>)
+      (unknown Let matchedSubstr be the substring of S from lastIndex to e .)
+      (call <createdatapropertyorthrow> <a> (string 0) <matchedsubstr>)
+      (unknown If R contains any GroupName , then block: [
         let groups = (call <ordinaryobjectcreate> <null>)
-      ] (else block: [
+      ] (unknown else (else block: [
         let groups = <undefined>
-      ]))
-        (call <createdatapropertyorthrow> <a> (string groups) <groups>)
-        (unknown For each integer i such that i ≥ 1 and i ≤ n , do block: [
-        (unknown Let captureI be i th element of r 's captures List .)
-        (condition (<capturei> equals <undefined>) let capturedvalue = <undefined> (else (condition (<fullunicode> equals <true>) block: [
-        (unknown Assert : captureI is a List of code points .)
-        let capturedvalue = (call <codepointstostring> <capturei>)
-      ]) (else block: [
-        (assert (<fullunicode> equals <false>))
-        (unknown Assert : captureI is a List of code units .)
-        (unknown Let capturedValue be the String value consisting of the code units of captureI .)
       ])))
+      (call <createdatapropertyorthrow> <a> (string groups) <groups>)
+      (unknown For each integer i such that i ≥ 1 and i ≤ n , do block: [
+        (unknown Let captureI be i th element of r 's captures List .)
+        (if (<capturei> equals <undefined>)
+          then: let capturedvalue = <undefined>
+          else: (if (<fullunicode> equals <true>)
+            then: block: [
+              (unknown Assert : captureI is a List of code points .)
+              let capturedvalue = (call <codepointstostring> <capturei>)
+            ]
+            else: block: [
+              (assert (<fullunicode> equals <false>))
+              (unknown Assert : captureI is a List of code units .)
+              (unknown Let capturedValue be the String value consisting of the code units of captureI .)
+            ]
+          )
+        )
         (call <createdatapropertyorthrow> <a> (call <tostring> (call <𝔽> <i>)) <capturedvalue>)
         (unknown If the i th capture of R was defined with a GroupName , then block: [
-        (unknown Let s be the CapturingGroupName of the corresponding RegExpIdentifierName .)
-        (call <createdatapropertyorthrow> <groups> <s> <capturedvalue>)
+          (unknown Let s be the CapturingGroupName of the corresponding RegExpIdentifierName .)
+          (call <createdatapropertyorthrow> <groups> <s> <capturedvalue>)
+        ])
       ])
-      ])
-        (return_ <a>)
-      ]
+      (return_ <a>)
+    ]
   `);
 });
 

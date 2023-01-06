@@ -1,9 +1,9 @@
+import { isAlgorithmNode } from "./parser-tools/isAlgorithmNode";
 import { prettyPrintAST } from "./parser-tools/prettyPrintAST";
-import { AlgorithmNode } from "./parser/parse";
+import { AlgorithmNode } from "./parser/ast";
 
 expect.addSnapshotSerializer({
-  test: (val) =>
-    val && typeof val.ast === "string" && Array.isArray(val.children),
+  test: (val) => isAlgorithmNode(val),
   print: (val) => {
     return prettyPrintAST(val as AlgorithmNode);
   },

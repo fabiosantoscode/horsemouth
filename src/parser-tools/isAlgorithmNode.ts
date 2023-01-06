@@ -1,4 +1,4 @@
-import { AlgorithmNode } from "../parser/parse";
+import { AlgorithmNode } from "../parser/ast";
 
 export const isAlgorithmNode = (node: any): node is AlgorithmNode => {
   return (

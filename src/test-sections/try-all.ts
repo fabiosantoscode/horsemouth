@@ -3,7 +3,8 @@ import { parseHTML } from "linkedom";
 import path from "path";
 import "../experiments";
 import { walk } from "../parser-tools/walk";
-import { AlgorithmBlock, parseAlgorithmBlock } from "../parser/parse";
+import { AlgorithmBlock } from "../parser/ast";
+import { parseAlgorithmBlock } from "../parser/parse";
 import { stringifyToJs } from "../stringify/stringifyToJs";
 import { findWellKnownSymbols } from "../wellKnownSymbols/index";
 
@@ -19,10 +20,10 @@ findWellKnownSymbols(document);
 
 const clauses = [
   ...document.querySelectorAll(
-    "#sec-type-conversion emu-alg"
+    // "#sec-type-conversion emu-alg"
     // "#sec-properties-of-the-regexp-prototype-object emu-alg"
     // "#sec-operations-on-objects emu-alg"
-    // "#sec-map-objects emu-alg"
+    "#sec-map-objects emu-alg"
     // "#sec-structured-data emu-alg"
   ),
 ].flatMap((algorithm) => {
