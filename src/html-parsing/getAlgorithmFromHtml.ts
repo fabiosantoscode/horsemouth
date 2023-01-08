@@ -21,6 +21,8 @@ setTimeout(() => {
     console.log("algorithm head errors", errors);
   errors = 0;
 });
+
+/** returns a function-like from an <emu-alg> or <ol> with a list of steps */
 export const getAlgorithmBlockFromHtml = (
   node: Element | HTMLAlgorithm | AlgorithmBlockFromHtml | string[]
 ): AlgorithmBlockFromHtml => {

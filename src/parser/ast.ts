@@ -24,7 +24,6 @@ export type AlgorithmNode =
   | { ast: "set"; children: [Lhs, Expression] }
   | { ast: "return_"; children: [Expression] }
   | { ast: "throw_"; children: [Expression] }
-  | { ast: "unknown"; children: (string | AlgorithmNode)[] }
   | { ast: "innerBlockHack"; children: [string] }
   | { ast: "comment"; children: [string] };
 
@@ -45,6 +44,7 @@ export type Expression =
   | { ast: "number"; children: [string] }
   | { ast: "float"; children: [number] }
   | { ast: "bigint"; children: [bigint] }
+  | { ast: "unknown"; children: (string | AlgorithmNode)[] }
   | { ast: "binaryExpr"; children: [string, Expression, Expression] }
   | { ast: "unaryExpr"; children: [string, Expression, Expression] }
   | { ast: "call"; children: [Expression, ...Expression[]] }

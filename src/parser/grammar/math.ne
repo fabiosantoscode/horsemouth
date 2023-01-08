@@ -1,7 +1,7 @@
 
 # expr -> mathExpr is in booleanExpr.ne
 
-mathExpr   -> subtractionExpr                               {% id %}
+mathExpr      -> subtractionExpr                            {% id %}
 
 subtractionExpr -> additionExpr                             {% id %}
 subtractionExpr -> subtractionExpr "-" additionExpr         {% ([left, _, right]) => ({

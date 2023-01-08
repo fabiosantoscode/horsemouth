@@ -3,83 +3,18 @@ import { algorithmTokenizer } from "./tokenizer";
 
 import { Parser } from "nearley";
 import {
-  AlgorithmBlockFromHtml,
   AlgorithmStepFromHtml,
-  getAlgorithmBlockFromHtml,
   getAlgorithmStepFromHtml,
 } from "../html-parsing/getAlgorithmFromHtml";
 import { prettyPrintAST } from "../parser-tools/prettyPrintAST";
 import { mapTree } from "../parser-tools/walk";
+import { AlgorithmNode } from "./ast";
 import Grammar from "./grammar/grammar";
-import { HTMLAlgorithm } from "../html-parsing/findAlgorithms";
-import { AlgorithmBlock, AlgorithmNode, NodeOfType } from "./ast";
+import { parseAlgorithmBlock } from "./parseBlock";
+import { shoddyParse } from "./shoddyParse";
 
-interface ParseOpts {
+export interface ParseOpts {
   allowUnknown?: boolean;
-}
-
-export function parseAlgorithmBlock(
-  node: Element | HTMLAlgorithm | AlgorithmBlockFromHtml | string[],
-  opts: ParseOpts = {}
-): AlgorithmBlock {
-  const { usage, steps } = getAlgorithmBlockFromHtml(node);
-
-  return {
-    ast: "block",
-    usage,
-    children: combineIfElse(
-      steps.map((algoStep) => parseAlgorithmStep(algoStep, opts))
-    ),
-  };
-}
-
-/** if/else statements come in multiple steps but let's fold them into the if right here. */
-function combineIfElse(steps: AlgorithmNode[]) {
-  return steps.reduce((acc, cur) => {
-    let prev = acc[acc.length - 1];
-    if (cur.ast === "else") {
-      if (prev?.ast === "condition" || prev?.ast === "unknown") {
-        pushIntoInnermostElse(prev, cur);
-        return acc;
-      }
-      throw new Error("else without if");
-    }
-    acc.push(cur);
-    return acc;
-  }, [] as AlgorithmNode[]);
-}
-
-// (if then) -> (if then {else})
-// (if then (else (if then))) -> (if then (else (if then {else})))
-function pushIntoInnermostElse(
-  conditionLike: NodeOfType<"condition" | "unknown">,
-  child: NodeOfType<"else">
-) {
-  if (conditionLike.ast === "unknown") {
-    conditionLike.children.push({
-      ast: "unknown",
-      children: ["else", child],
-    });
-    return;
-  }
-
-  const lastChild = conditionLike.children[2];
-  // There's a slot for "else"
-  if (lastChild === undefined) {
-    conditionLike.children.push(child);
-    return;
-  }
-
-  if (
-    lastChild.ast === "else" &&
-    (lastChild.children[0].ast === "condition" ||
-      lastChild.children[0].ast === "unknown")
-  ) {
-    pushIntoInnermostElse(lastChild.children[0], child);
-    return;
-  }
-
-  throw new Error("invalid if/else structure");
 }
 
 export function parseAlgorithmStep(
@@ -175,23 +110,30 @@ export const getNodeSource = (node: AlgorithmNode) => nodeSources.get(node);
 /** plainly parse with our grammar and understand the error (if any) */
 const justParse = (
   source = ""
-):
+): (
   | ["parseError", Error]
   | ["ambiguityError", AlgorithmNode[]]
-  | ["ok", AlgorithmNode] => {
+  | ["ok", AlgorithmNode]
+) => {
   const parser = new Parser(Grammar, { lexer: algorithmTokenizer });
+  const tryShoddy = () => {
+    const shoddy = shoddyParse(source);
+    return shoddy && (["ok", shoddy] as ['ok', AlgorithmNode]);
+  };
+
   let solutions;
   try {
     solutions = parser
       .feed(source.toLocaleLowerCase().trimEnd().replace(/\.$/, ""))
       .finish();
   } catch (e) {
-    return ["parseError", e as Error];
+    return tryShoddy() ?? ["parseError", e as Error];
   }
 
   switch (solutions.length) {
     case 0: {
-      return ["parseError", new Error("no solutions found")];
+      return tryShoddy()
+        ?? ["parseError", new Error("no solutions found")];
     }
     case 1: {
       return ["ok", solutions[0]];

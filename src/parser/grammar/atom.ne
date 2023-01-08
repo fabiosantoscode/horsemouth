@@ -92,13 +92,19 @@ atom          -> ("the" "value" "of":?) atom    {% ([redundant, id]) => id %}
 # CALLS
 ######################################
 atom          -> call                           {% id %}
-call          -> callStart lhs call_args        {% ([_drop, id, callArgs]) => ({
+call          -> callStart callTarget call_args {% ([_drop, id, callArgs]) => ({
                                                   ast: 'call',
                                                   children: [id, ...callArgs]
                                                 }) %}
 
 # drop stopwords
 callStart     -> "perform":? ("!" | "?"):?      {% id %}
+
+callTarget    -> lhs                            {% id %}
+callTarget    -> %word ":" ":" %word            {% ([target, _colon, _colon2, target2]) => n({
+                                                  ast: 'reference',
+                                                  children: [target.text + '::' + target2.text]
+                                                }) %}
 
 call_args     -> "(" expr ("," expr):* ")"      {% ([paren, firstArg, args]) => [
                                                   n(firstArg),

@@ -3,20 +3,25 @@ import { isAlgorithmNode } from "./isAlgorithmNode";
 
 export const walk = (
   node: AlgorithmNode | AlgorithmNode[],
-  fn: (node: AlgorithmNode) => void
+  fn: (node: AlgorithmNode) => void | typeof walkSkip
 ) => {
   if (Array.isArray(node)) {
     node.forEach((node) => walk(node, fn));
     return;
   } else if (isAlgorithmNode(node)) {
-    fn(node);
-    node.children.forEach((child) => {
-      if (isAlgorithmNode(node)) {
-        walk(child as AlgorithmNode, fn);
-      }
-    });
+    const ret = fn(node);
+    if (ret !== walkSkip) {
+      node.children.forEach((child) => {
+        if (isAlgorithmNode(node)) {
+          walk(child as AlgorithmNode, fn);
+        }
+      });
+    }
   }
 };
+
+const walkSkip = Symbol("skip the subtree here");
+walk.skip = walkSkip;
 
 export const mapAlgorithm = (
   algo: Algorithm,

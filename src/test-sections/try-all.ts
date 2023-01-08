@@ -4,7 +4,7 @@ import path from "path";
 import "../experiments";
 import { walk } from "../parser-tools/walk";
 import { AlgorithmBlock } from "../parser/ast";
-import { parseAlgorithmBlock } from "../parser/parse";
+import { parseAlgorithmBlock } from "../parser/parseBlock";
 import { stringifyToJs } from "../stringify/stringifyToJs";
 import { findWellKnownSymbols } from "../wellKnown/findWellKnownSymbols";
 
@@ -18,25 +18,26 @@ const { document } = parseHTML(keyedCollections);
 
 findWellKnownSymbols(document);
 
-/*
-const allClauses = [
-  ...document.querySelectorAll("#sec-abstract-operations emu-alg"),
-  ...document.querySelectorAll("#sec-abstract-operations ~ emu-clause emu-alg"),
-];
-*/
+let sections = [
+  ...document.querySelectorAll("#sec-abstract-operations"),
+  ...document.querySelectorAll("#sec-abstract-operations ~ emu-clause"),
+]
 
-const clauses = [
-  ...document.querySelectorAll("#sec-abstract-operations emu-alg"),
-  ...document.querySelectorAll(
-    // "#sec-type-conversion emu-alg"
-    // "#sec-properties-of-the-regexp-prototype-object emu-alg"
-    // "#sec-operations-on-objects emu-alg"
-    // "#sec-keyed-collections emu-alg"
-    // "#sec-structured-data emu-alg"
-    // "#sec-control-abstraction-objects emu-alg"
-    "#sec-abstract-operations ~ emu-clause emu-alg"
-  ),
-].flatMap((algorithm) => {
+// Stop at Map and Set
+let stop = false
+sections = sections.flatMap(sec => {
+  if (stop) return[]
+  if (sec.id === 'sec-keyed-collections') {
+    stop = true
+  }
+  return [sec]
+})
+
+const algorithms = sections.flatMap((section) =>
+  [...section.querySelectorAll("emu-alg")]
+)
+
+const clauses = [...algorithms].flatMap((algorithm) => {
   const clause = algorithm.closest("emu-clause");
 
   const howManyAlgorithmsInClause = [...(clause?.children ?? [])].filter(
@@ -90,6 +91,9 @@ let functionsWithEveryStatementUnknown = 0;
 for (const algorithm of toStringify) {
   let unknownCountHere = 0;
   walk(algorithm, (node) => {
+    if (node.ast === "assert") {
+      return walk.skip; // don't care about unknown here
+    }
     if (node.ast === "unknown") {
       unknownCountHere++;
 
@@ -119,11 +123,10 @@ for (const algorithm of toStringify) {
 for (const [title, contents] of Object.entries({
   "Function count": toStringify.length,
   "Times that 'unknown' structure was used": unknownCount,
-  "Functions that don't need 'unknown'": functionsWithoutUnknown,
-  "Functions that used 'unknown'":
+  "Functions without 'unknown'":
     functionsWithUnknown +
     " (" +
-    Math.round(((functionsWithUnknown / toStringify.length) * 1000) / 10) +
+    Math.round(((1 - functionsWithUnknown / toStringify.length) * 1000) / 10) +
     "%)",
   "Functions entirely comprised of 'unknown'":
     functionsWithEveryStatementUnknown +
