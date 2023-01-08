@@ -21,9 +21,11 @@ const ellipsis = "…";
 
 const algorithmHeadTokenizer = noSpaceTokenizer(
   moo.compile({
-    word: /[a-zA-Z_$][a-zA-Z0-9_$:.]*/,
+    word: /[a-zA-Z_$][a-zA-Z0-9_$:]*/,
+    intrinsic: /%[a-zA-Z_$][a-zA-Z0-9_$:.]*%/,
     space: / +/,
     comma: ",",
+    dot: ".",
     lParen: "(",
     rParen: ")",
     lBrace: "{",
@@ -41,7 +43,6 @@ export function getAlgorithmHead({
 }: Pick<HTMLAlgorithm, "section">): AlgorithmUsage {
   const [headText, headTokens] = h1Tokens(section, (unfiltered) =>
     unfiltered
-      .toLocaleLowerCase()
       // "p1, p2, … , pn" is found in the head of some algorithms
       .replace(/p1\s*,\s*p2\s*,\s*…\s*,\s*pn/, "…p")
   );
@@ -56,16 +57,16 @@ export function getAlgorithmHead({
     };
 
     let type: AlgorithmUsage["type"] = "function";
-    let rootName = Array.from(
+    let funcName = Array.from(
       (function* findNameParts() {
-        const firstWord = expect("word").value;
+        const firstWord = cur().value;
 
         if (firstWord === "get") {
           type = "getter";
+          next();
         } else if (firstWord === "set") {
           type = "setter";
-        } else {
-          yield firstWord;
+          next();
         }
 
         while (1) {
@@ -80,7 +81,7 @@ export function getAlgorithmHead({
             expect("rSquareBracket");
           } else if (tok.type === "dot") {
             // skip the dot
-          } else if (tok.type === "word") {
+          } else if (tok.type === "word" || tok.type === "intrinsic") {
             yield tok.value;
           } else {
             throw new Error("unexpected token " + tok.type);
@@ -91,7 +92,7 @@ export function getAlgorithmHead({
 
     return {
       type,
-      name: rootName,
+      name: funcName.map((upperName) => upperName.toLocaleLowerCase()),
       args: parseArguments(type, expect, cur),
     } as AlgorithmUsage;
   } catch (error) {
@@ -111,30 +112,40 @@ function parseArguments(
     return [];
   }
 
+  let inBrackets = 0;
   const args: AlgorithmArgs[] = [];
 
   while (cur() && cur().type !== "rParen") {
-    const isOptional = cur().type === "lSquareBracket";
-    if (isOptional) expect("lSquareBracket");
-
-    // ( regular_arg[ , optional_arg] )
-    if (cur().type === "comma") expect("comma");
+    // Close square brackets, commas
+    while (cur().type === "lSquareBracket" || cur().type === "comma") {
+      if (cur().type === "lSquareBracket") {
+        inBrackets++;
+        expect("lSquareBracket");
+      } else {
+        expect("comma");
+      }
+    }
 
     const isVarArgs = cur().type === "ellipsis";
     if (isVarArgs) expect("ellipsis");
 
-    const argName = expect("word").value;
+    const argName = expect("word").value.toLocaleLowerCase();
 
     args.push({
       argName,
-      isOptional,
+      isOptional: inBrackets > 0,
       isVarArgs,
     });
 
-    if (isOptional) expect("rSquareBracket");
-
-    // ( regular_arg, [optional_arg] )
-    if (cur().type === "comma") expect("comma");
+    // Close square brackets, commas
+    while (cur().type === "rSquareBracket" || cur().type === "comma") {
+      if (cur().type === "rSquareBracket") {
+        inBrackets--;
+        expect("rSquareBracket");
+      } else {
+        expect("comma");
+      }
+    }
   }
 
   expect("rParen");
