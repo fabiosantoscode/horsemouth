@@ -9,11 +9,11 @@ export function shoddyParse(sourceCode: string): AlgorithmNode | undefined {
     ),
   ].join(" ");
 
-  let matches: string[] = []
+  let matches: string[] = [];
   const attempt = (re: RegExp) => {
-    matches = (basicTokens.match(re) || []).slice(1)
-    if (matches.length) return true
-  }
+    matches = (basicTokens.match(re) || []).slice(1);
+    if (matches.length) return true;
+  };
 
   switch (true) {
     case attempt(/^assert : (.+)/): {

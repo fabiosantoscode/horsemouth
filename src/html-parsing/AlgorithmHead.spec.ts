@@ -17,6 +17,9 @@ it("can parse varargs", () => {
   expect(
     testHeader("AsyncFunction ( p1, p2, … , pn, body )")
   ).toMatchInlineSnapshot(`"function asyncfunction ( ...p , body )"`);
+  expect(testHeader("TypedArray ( ...args )")).toMatchInlineSnapshot(
+    `"function typedarray ( ...args )"`
+  );
 });
 
 it("can parse optional arguments", () => {

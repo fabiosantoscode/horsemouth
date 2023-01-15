@@ -7,6 +7,8 @@
 @include "./statements/conditions.ne"
 @include "./lhs.ne"
 @include "./atom.ne"
+@include "./strings/strings.ne"
+@include "./lists/lists.ne"
 @include "./types.ne"
 @include "./math.ne"
 @include "./booleanExpr.ne"
@@ -16,23 +18,6 @@
 root          -> statement                      {% id %}
 
 
-
-# LISTS
-######################################
-
-expr          -> list                           {% id %}
-list          -> %lList list_items %rList       {% ([lList, items, rList]) => ({
-                                                  ast: 'list',
-                                                  children: items
-                                                }) %}
-
-list_items    -> (",":? expr):*           {% ([items]) =>
-                                                  items.map(a => a[1]) %}
-
-list          -> "a" "new" "empty" "list"       {% ([new_, empty, list]) => ({
-                                                  ast: 'list',
-                                                  children: []
-                                                }) %}
 
 # GETTING CONTEXT
 
@@ -45,9 +30,19 @@ expr          -> "the":? "this" "value"         {% () => ({
 ######################################
 
 expr          -> typeCheck                      {% id %}
-typeCheck     -> "the" expr "that" "is" expr    {% ([the, expr, that, is, type]) => ({
+typeCheck     -> "the" expr ("that" "is") expr  {% ([the_, type, thatIs_, expr]) => ({
                                                   ast: 'typeCheck',
-                                                  children: [expr, type]
+                                                  children: [type, expr]
+                                                }) %}
+
+typeCheck     -> "the" typee ref                {% ([the_, type, expr]) => ({
+                                                  ast: 'typeCheck',
+                                                  children: [type, expr]
+                                                }) %}
+
+typee          -> "list"                         {% () => ({
+                                                  ast: 'reference',
+                                                  children: ['list']
                                                 }) %}
 
 # INNER BLOCKS

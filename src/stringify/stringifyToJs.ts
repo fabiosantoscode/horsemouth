@@ -7,12 +7,14 @@ import { findWellKnownIntrinsics } from "../wellKnown/findWellKnownIntrinsics";
 import { findWellKnownSymbols } from "../wellKnown/findWellKnownSymbols";
 
 let unnamedFunctionCount = 0;
+let fNameToAoid = new Map<string, string>();
 
 export function stringifyToJs(
   algorithms: AlgorithmBlock[],
   document: Document
 ) {
   unnamedFunctionCount = 0;
+  fNameToAoid = new Map<string, string>();
 
   const slots = new Set();
   for (const algorithm of algorithms) {
@@ -50,6 +52,26 @@ export function stringifyToJs(
     );
   }
 
+  // Find all functions with aoid/ID, and provide those aoid
+  const foundUniqueIds = new Map<string, AlgorithmBlock>();
+  for (const algorithm of algorithms) {
+    const cleanUniqueId = algorithm.uniqueId;
+    if (cleanUniqueId && !foundUniqueIds.get(cleanUniqueId)) {
+      foundUniqueIds.set(cleanUniqueId, algorithm);
+      const fname = getObviousFname(algorithm.usage?.name);
+      if (fname) {
+        fNameToAoid.set(fname, cleanUniqueId);
+      }
+    } else if (cleanUniqueId && foundUniqueIds.has(cleanUniqueId)) {
+      console.log("non-unique algorithm", algorithm);
+      console.log(
+        "algorithm that already exists with the same ID",
+        foundUniqueIds.get(cleanUniqueId)
+      );
+      throw new Error("unique ID not really that unique eh? " + cleanUniqueId);
+    }
+  }
+
   return (
     [...slots].sort().join("\n") +
     "\n\n// The good stuff\n\n" +
@@ -57,16 +79,28 @@ export function stringifyToJs(
   );
 }
 
-export function stringifyAlgorithmToJs({ usage, children }: AlgorithmBlock) {
-  const fname =
-    cleanIdentifier(usage?.name.join(".") ?? "") ||
-    `TODO_unnamedFunction${++unnamedFunctionCount}`;
+/** If we have "usage", get name from it */
+const getObviousFname = (nameFromUsage?: string[]) =>
+  cleanIdentifier(nameFromUsage?.join(".").trim() ?? "") || undefined;
 
-  const leadingComment = `
-    /**
-     * ${usage?.name.join(".")}
-     * ${JSON.stringify(usage)}
-     **/`;
+export function stringifyAlgorithmToJs({
+  usage,
+  children,
+  link,
+}: AlgorithmBlock) {
+  const obviousName = getObviousFname(usage?.name);
+
+  const fname =
+    obviousName && fNameToAoid.has(obviousName)
+      ? fNameToAoid.get(obviousName)!
+      : obviousName
+      ? `TODO_nameWithoutAOID${obviousName}`
+      : `TODO_unnamedFunction${++unnamedFunctionCount}`;
+
+  let leadingComment = "";
+  if (link) {
+    leadingComment = `/** @see ${link} */`;
+  }
   const functionHead = `
     function ${fname}
     (
@@ -97,10 +131,9 @@ export function stringifyAlgorithmToJs({ usage, children }: AlgorithmBlock) {
 // wrapper to add comment wit source text
 const stringifyAlgorithmStatement = (node: AlgorithmNode) => {
   const source = getNodeSource(node);
-  return source
-    ? `
-/** ${source} */
-    ${stringifyAlgorithmNodeRaw(node)}`
+  return source && node.ast !== "unknown"
+    ? `\n\n/** ${source} */
+      ${stringifyAlgorithmNodeRaw(node)}`
     : stringifyAlgorithmNodeRaw(node);
 };
 

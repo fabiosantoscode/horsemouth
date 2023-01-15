@@ -2,6 +2,9 @@ import type { AlgorithmUsage } from "../html-parsing/AlgorithmHead";
 
 export type AlgorithmBlock = {
   ast: "block";
+  uniqueId?: string;
+  prettyName?: string;
+  link?: string;
   usage?: AlgorithmUsage;
   children: AlgorithmNode[];
 };

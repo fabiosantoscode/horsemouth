@@ -17,11 +17,10 @@ export type AlgorithmUsage =
   | { type: "getter"; name: string[]; args: [] }
   | { type: "setter"; name: string[]; args: AlgorithmArgs[] };
 
-const ellipsis = "…";
-
 const algorithmHeadTokenizer = noSpaceTokenizer(
   moo.compile({
     word: /[a-zA-Z_$][a-zA-Z0-9_$:]*/,
+    ellipsis: /…|\.\.\./,
     intrinsic: /%[a-zA-Z_$][a-zA-Z0-9_$:.]*%/,
     space: / +/,
     comma: ",",
@@ -30,7 +29,6 @@ const algorithmHeadTokenizer = noSpaceTokenizer(
     rParen: ")",
     lBrace: "{",
     rBrace: "}",
-    ellipsis,
     atAt: "@@",
     lSquareBracket: "[",
     rSquareBracket: "]",

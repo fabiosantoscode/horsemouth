@@ -110,15 +110,14 @@ export const getNodeSource = (node: AlgorithmNode) => nodeSources.get(node);
 /** plainly parse with our grammar and understand the error (if any) */
 const justParse = (
   source = ""
-): (
+):
   | ["parseError", Error]
   | ["ambiguityError", AlgorithmNode[]]
-  | ["ok", AlgorithmNode]
-) => {
+  | ["ok", AlgorithmNode] => {
   const parser = new Parser(Grammar, { lexer: algorithmTokenizer });
   const tryShoddy = () => {
     const shoddy = shoddyParse(source);
-    return shoddy && (["ok", shoddy] as ['ok', AlgorithmNode]);
+    return shoddy && (["ok", shoddy] as ["ok", AlgorithmNode]);
   };
 
   let solutions;
@@ -132,8 +131,7 @@ const justParse = (
 
   switch (solutions.length) {
     case 0: {
-      return tryShoddy()
-        ?? ["parseError", new Error("no solutions found")];
+      return tryShoddy() ?? ["parseError", new Error("no solutions found")];
     }
     case 1: {
       return ["ok", solutions[0]];

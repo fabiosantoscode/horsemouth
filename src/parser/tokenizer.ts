@@ -26,6 +26,7 @@ const tokens = {
   percentReference: /"?%[^%]+%"?/u,
   wellKnownSymbol: /@@[a-z]+/u,
   string: /"[^"]*"/u,
+  hexNumber: /0x[0-9a-fA-F]+/u,
   number: /\d+(?:\.\d+)?/u,
   lParen: "(",
   rParen: ")",

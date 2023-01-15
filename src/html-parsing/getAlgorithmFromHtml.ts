@@ -8,6 +8,9 @@ import { AlgorithmUsage, getAlgorithmHead } from "./AlgorithmHead";
 
 export interface AlgorithmBlockFromHtml {
   usage?: AlgorithmUsage;
+  uniqueId?: string;
+  prettyName?: string;
+  link?: string;
   steps: AlgorithmStepFromHtml[];
 }
 export type AlgorithmStepFromHtml = {
@@ -36,16 +39,17 @@ export const getAlgorithmBlockFromHtml = (
     };
   }
 
-  if ((node as AlgorithmBlockFromHtml).steps)
+  if ((node as AlgorithmBlockFromHtml).steps) {
     return node as AlgorithmBlockFromHtml;
+  }
 
-  let usage: AlgorithmUsage | undefined;
+  const retBlock: AlgorithmBlockFromHtml = { steps: [] };
+
   let algorithmNode: Element;
-
   if ((node as any).algorithm) {
     algorithmNode = (node as HTMLAlgorithm).algorithm;
     try {
-      usage = getAlgorithmHead(node as HTMLAlgorithm);
+      retBlock.usage = getAlgorithmHead(node as HTMLAlgorithm);
     } catch (e) {
       errors++;
       console.log("error getting algorithm head", e);
@@ -65,7 +69,7 @@ export const getAlgorithmBlockFromHtml = (
     "algorithm blocks are <OL> elements"
   );
 
-  const steps = [...algorithmNode.children].flatMap((child) => {
+  retBlock.steps = [...algorithmNode.children].flatMap((child) => {
     if (child.tagName === "LI") {
       return [getAlgorithmStepFromHtml(child)];
     }
@@ -75,7 +79,23 @@ export const getAlgorithmBlockFromHtml = (
     return [];
   });
 
-  return { usage, steps };
+  const sectionElm = algorithmNode && algorithmNode.closest("emu-clause");
+  if (sectionElm) {
+    const id = sectionElm.getAttribute("id");
+    retBlock.uniqueId = sectionElm.getAttribute("aoid") ?? undefined;
+    if (id) {
+      retBlock.link = "https://262.ecma-international.org/12.0/#" + id;
+      try {
+        retBlock.prettyName = getAlgorithmHead({
+          section: sectionElm,
+        }).name.join("::");
+      } catch {
+        // unparsable header, do nothing
+      }
+    }
+  }
+
+  return retBlock;
 };
 
 export const getAlgorithmStepFromHtml = (

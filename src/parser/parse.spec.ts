@@ -125,6 +125,20 @@ it("can parse numbers", () => {
   );
 });
 
+it("parses string operations", () => {
+  expect(
+    parseAlgorithmStep("Return the code unit 0x0020 (SPACE) .")
+  ).toMatchInlineSnapshot(`(return_ (string  ))`);
+
+  expect(
+    parseAlgorithmStep(
+      "Return the string-concatenation of name , the code unit 0x003A (COLON), the code unit 0x0020 (SPACE), and msg ."
+    )
+  ).toMatchInlineSnapshot(
+    `(return_ (<name> + ((string :) + ((string  ) + <msg>))))`
+  );
+});
+
 it("falls back to a shoddy parse", () => {
   expect(
     parseAlgorithmStep("Assert : potatoes tomatoes UwU unparsable")

@@ -10,11 +10,11 @@ export function parseAlgorithmBlock(
   node: Element | HTMLAlgorithm | AlgorithmBlockFromHtml | string[],
   opts: ParseOpts = {}
 ): AlgorithmBlock {
-  const { usage, steps } = getAlgorithmBlockFromHtml(node);
+  const { steps, ...rest } = getAlgorithmBlockFromHtml(node);
 
   return {
+    ...rest,
     ast: "block",
-    usage,
     children: combineIfElse(
       steps.map((algoStep) => parseAlgorithmStep(algoStep, opts))
     ),

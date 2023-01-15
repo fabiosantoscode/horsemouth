@@ -21,21 +21,21 @@ findWellKnownSymbols(document);
 let sections = [
   ...document.querySelectorAll("#sec-abstract-operations"),
   ...document.querySelectorAll("#sec-abstract-operations ~ emu-clause"),
-]
+];
 
 // Stop at Map and Set
-let stop = false
-sections = sections.flatMap(sec => {
-  if (stop) return[]
-  if (sec.id === 'sec-keyed-collections') {
-    stop = true
+let stop = false;
+sections = sections.flatMap((sec) => {
+  if (stop) return [];
+  if (sec.id === "sec-keyed-collections") {
+    stop = true;
   }
-  return [sec]
-})
+  return [sec];
+});
 
-const algorithms = sections.flatMap((section) =>
-  [...section.querySelectorAll("emu-alg")]
-)
+const algorithms = sections.flatMap((section) => [
+  ...section.querySelectorAll("emu-alg"),
+]);
 
 const clauses = [...algorithms].flatMap((algorithm) => {
   const clause = algorithm.closest("emu-clause");
@@ -46,6 +46,7 @@ const clauses = [...algorithms].flatMap((algorithm) => {
 
   if (
     algorithm.closest("emu-note") ||
+    algorithm.closest("emu-table") ||
     !clause ||
     !clause.id ||
     algorithm.hasAttribute("example") ||
@@ -85,9 +86,9 @@ const addUnknownFrequency = (unknownString: string) => {
 };
 
 let unknownCount = 0;
-let functionsWithoutUnknown = 0;
 let functionsWithUnknown = 0;
 let functionsWithEveryStatementUnknown = 0;
+
 for (const algorithm of toStringify) {
   let unknownCountHere = 0;
   walk(algorithm, (node) => {
@@ -106,9 +107,7 @@ for (const algorithm of toStringify) {
     }
   });
 
-  if (unknownCountHere === 0) {
-    functionsWithoutUnknown++;
-  } else {
+  if (unknownCountHere > 0) {
     functionsWithUnknown++;
   }
   const everyStatementUnknown = algorithm.children.every(
@@ -124,6 +123,7 @@ for (const [title, contents] of Object.entries({
   "Function count": toStringify.length,
   "Times that 'unknown' structure was used": unknownCount,
   "Functions without 'unknown'":
+    toStringify.length -
     functionsWithUnknown +
     " (" +
     Math.round(((1 - functionsWithUnknown / toStringify.length) * 1000) / 10) +
