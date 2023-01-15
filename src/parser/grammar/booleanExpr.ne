@@ -26,7 +26,7 @@ booleanExpr -> (comparisonExpr ","):+ ("and" | "or") comparisonExpr
 ######################################
 
 comparisonExpr -> mathExpr                        {% id %}
-comparisonExpr -> comparisonExpr ("is" | "=") mathExpr
+comparisonExpr -> comparisonExpr ("is" | "=" | "is" "the" "same" "as") mathExpr
                                                   {% ([expr1, is, expr2]) =>
                                                     compare(expr1, expr2)
                                                   %}

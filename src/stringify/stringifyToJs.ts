@@ -175,6 +175,14 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
     case "list": {
       return `[${node.children.map(s).join(", ")}]`;
     }
+    case "record": {
+      return `{${node.children
+        .map((child) => {
+          const [key, value] = child.children;
+          return `"${key}": ${s(value)}`;
+        })
+        .join(", ")}}`;
+    }
     case "typeCheck": {
       const [type, value] = node.children;
       return `(/* I'm going to assume this is a ${s(type)} */ ${s(value)})`;

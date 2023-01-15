@@ -156,3 +156,17 @@ it("falls back to a shoddy parse", () => {
     `(throw_ (unknown potatoes tomatoes uwu unparsable))`
   );
 });
+
+it("creates records", () => {
+  expect(
+    parseAlgorithmStep("Let record be a new Record { [[Key]]: value }.")
+  ).toMatchInlineSnapshot(`let record = (Record {key: <value>})`);
+
+  expect(
+    parseAlgorithmStep(
+      "Append the Record { [[Module]]: module , [[ExportName]]: exportName } to resolveSet ."
+    )
+  ).toMatchInlineSnapshot(
+    `(call <PUSH> <resolveset> (Record {module: <module>, exportname: <exportname>}))`
+  );
+});

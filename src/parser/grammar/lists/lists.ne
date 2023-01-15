@@ -22,7 +22,7 @@ statement   -> push
             {% id %}
 
 push        -> append_
-              lhs
+              atom
               appendTo_
               lhs
 

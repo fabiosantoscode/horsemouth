@@ -35,6 +35,8 @@ const tokens = {
   rSlotBrackets: "]]",
   lSquareBracket: "[",
   rSquareBracket: "]",
+  lBrace: "{",
+  rBrace: "}",
   lList: "«",
   rList: "»",
   math: /[+/*\-∞]/u,

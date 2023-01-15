@@ -52,7 +52,8 @@ export type Expression =
   | { ast: "unaryExpr"; children: [string, Expression, Expression] }
   | { ast: "call"; children: [Expression, ...Expression[]] }
   | { ast: "list"; children: Expression[] }
-  | { ast: "typeCheck"; children: [Expression, Expression] };
+  | { ast: "typeCheck"; children: [Expression, Expression] }
+  | { ast: "record"; children: {ast: 'recordField', children: [string, Expression] }[] };
 
 export type NodeOfType<T extends AlgorithmNode["ast"]> = Extract<
   AlgorithmNode,

@@ -7,6 +7,7 @@
 @include "./statements/conditions.ne"
 @include "./lhs.ne"
 @include "./atom.ne"
+@include "./records.ne"
 @include "./strings/strings.ne"
 @include "./lists/lists.ne"
 @include "./types.ne"

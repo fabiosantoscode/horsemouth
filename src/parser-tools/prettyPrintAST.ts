@@ -33,6 +33,12 @@ export function prettyPrintAST(
     case "unaryExpr":
       const [op, arg] = astNode.children;
       return `(${op} ${recurse(arg)})`;
+    case "record":
+      const entries = astNode.children.map((entry) => {
+        const [key, value] = entry.children;
+        return `${key}: ${recurse(value)}`;
+      });
+      return `(Record {${entries.join(", ")}})`;
     case "let":
       const [name, value] = astNode.children;
       return `let ${name.children[0]} = ${recurse(value)}`;
