@@ -1,4 +1,5 @@
 import { Algorithm, AlgorithmNode } from "../parser/ast";
+import { getDefined } from "../utils/getDefined";
 import { isAlgorithmNode } from "./isAlgorithmNode";
 
 export const walk = (
@@ -32,18 +33,14 @@ export const mapTree = (
   algo: AlgorithmNode,
   fn: (node: AlgorithmNode) => AlgorithmNode
 ): AlgorithmNode => {
-  if (algo && algo.children) {
-    return fn({
-      ...algo,
-      children: algo.children.map((child) => {
-        if (isAlgorithmNode(child)) {
-          return mapTree(child, fn);
-        } else {
-          return child;
-        }
-      }),
-    } as AlgorithmNode);
-  } else {
-    throw new Error("unreachable");
-  }
+  return fn({
+    ...algo,
+    children: getDefined(algo?.children).map((child) => {
+      if (isAlgorithmNode(child)) {
+        return mapTree(child, fn);
+      } else {
+        return child;
+      }
+    }),
+  } as AlgorithmNode);
 };

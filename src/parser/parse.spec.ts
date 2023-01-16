@@ -120,13 +120,15 @@ it("can parse loops", () => {
     `(forEach f <x> (call <f> <x>))`
   );
 
-  expect(parseAlgorithmStep("For each Function f of x, do f(x)")).toMatchInlineSnapshot(
-    `(forEach f <x> (call <f> <x>))`
-  );
+  expect(
+    parseAlgorithmStep("For each Function f of x, do f(x)")
+  ).toMatchInlineSnapshot(`(forEach f <x> (call <f> <x>))`);
 
-  expect(parseAlgorithmStep("For each Record { [[ Key ]] , [[ Value ]] } f of x, do f(x)")).toMatchInlineSnapshot(
-    `(forEach f <x> (call <f> <x>))`
-  );
+  expect(
+    parseAlgorithmStep(
+      "For each Record { [[ Key ]] , [[ Value ]] } f of x, do f(x)"
+    )
+  ).toMatchInlineSnapshot(`(forEach f <x> (call <f> <x>))`);
 });
 
 it("can parse calls", () => {

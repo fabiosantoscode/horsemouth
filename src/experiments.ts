@@ -1,5 +1,4 @@
-import { readFileSync, writeFileSync } from "fs";
-import { parseHTML, Element, Text } from "linkedom";
+import { Element, Text } from "linkedom";
 
 Element.prototype[Symbol.for("nodejs.util.inspect.custom")] = function () {
   return `<${this.tagName.toLowerCase()} ${(this.attributes as any)
