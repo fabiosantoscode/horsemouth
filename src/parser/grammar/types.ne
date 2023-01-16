@@ -7,8 +7,8 @@ type         -> ref                                         {% id %}
 type         -> record                                      {% id %}
 record       -> ref "{" recordFields "}"                    {% ([ref, open, fields, close]) => n({
                                                               ast: 'type',
-                                                              children: [null]
+                                                              children: []
                                                             }) %}
 
-recordFields -> lhs                                         {% id %}
+recordFields -> lhs                                         {% ([field]) => [field] %}
 recordFields -> recordFields "," lhs                        {% ([fields, comma, lhs]) => [...fields.map(n), n(lhs)] %}

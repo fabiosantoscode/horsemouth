@@ -13,18 +13,6 @@ stringConcat -> (expr ","):+ ("and") expr         {% ([chain, and_, end], _, rej
                                                     return chainedBinaryOp("+", ...allExprs)
                                                   } %}
 
-expr         -> atom "contains" atom              {% ([a, contains_, b]) => n({
-                                                    ast: 'call',
-                                                    children: [
-                                                      n({
-                                                        ast: 'reference',
-                                                        children: ['CONTAINS']
-                                                      }),
-                                                      n(a),
-                                                      n(b),
-                                                    ]
-                                                  }) %}
-
 # Code units
 atom         -> ("the" "code" "unit") %hexNumber codeUnitDesc {% ([_, unit]) => n({
                                                     ast: 'string',
@@ -33,3 +21,21 @@ atom         -> ("the" "code" "unit") %hexNumber codeUnitDesc {% ([_, unit]) => 
 
 # drop "DIGIT ZERO", "SMALL LATIN LETTER X", etc
 codeUnitDesc -> "(" %word:+ ")"                   {% id %}
+
+
+# Substrings
+atom         -> ("the" "substring" "of") atom "from" atom "to" atom
+                                                  {% ([_, str, from, start, to, end]) => {
+                                                    return n({
+                                                      ast: 'call',
+                                                      children: [
+                                                        n({
+                                                          ast: 'reference',
+                                                          children: ['SUBSTRING']
+                                                        }),
+                                                        str,
+                                                        start,
+                                                        end
+                                                      ]
+                                                    })
+                                                  } %}

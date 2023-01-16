@@ -26,7 +26,7 @@ statement    -> "repeat" "," "while" expr "," statement
                                                   children: [expr, n(block)]
                                                 }) %}
 
-statement    -> "for" "each" type ref "of" expr "," "do"  statement
+statement    -> "for" "each" type:? ref "of" expr "," "do"  statement
                                                 {% ([for_, each, type_, id, of, expr, comma, do_, block]) => ({
                                                   ast: 'forEach',
                                                   children: [id.children[0], expr, block]

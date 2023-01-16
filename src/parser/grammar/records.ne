@@ -1,11 +1,15 @@
 
-atom       -> ("a" "new") newRecord               {% ([a_, r]) => r %}
-atom       -> ("the") newRecord                   {% ([_, r]) => r %}
+atom       -> ("a" "new" | "the"):? newRecord     {% ([a_, r]) => r %}
 
-newRecord  -> ref:? "record" "{" rFieldList "}"   {% ([rType, record_, brace_, rFieldList ]) => n({
+newRecord  -> rHead "{" rFieldList "}"            {% ([rHead_, brace_, rFieldList ]) => n({
                                                     ast: 'record',
                                                     children: [...rFieldList]
                                                   })%}
+
+rHead      -> (ref:? "record")
+          | ("property" "descriptor")
+          | "propertydescriptor"
+          | "completion"                          {%id%}
 
 rFieldList -> rFieldList "," rField               {% ([fList, comma_, field]) =>
                                                     [...fList, field] %}

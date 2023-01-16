@@ -105,13 +105,22 @@ it("regexpbuiltinexec", () => {
       (unknown Let length be the number of code units in S .)
       let lastindex = (call <ℝ> (call <tolength> (call <get> <r> (string lastindex))))
       let flags = <r>.[[originalflags]]
-      (unknown If flags contains "g" , let global be true ; else let global be false .)
-      (unknown If flags contains "y" , let sticky be true ; else let sticky be false .)
+      (if (call <CONTAINS> <flags> (string g))
+        then: let global = <true>
+        else: let global = <false>
+      )
+      (if (call <CONTAINS> <flags> (string y))
+        then: let sticky = <true>
+        else: let sticky = <false>
+      )
       (if ((<global> equals <false>) and (<sticky> equals <false>))
         then: (set <lastindex> (number 0))
       )
       let matcher = <r>.[[regexpmatcher]]
-      (unknown If flags contains "u" , let fullUnicode be true ; else let fullUnicode be false .)
+      (if (call <CONTAINS> <flags> (string u))
+        then: let fullunicode = <true>
+        else: let fullunicode = <false>
+      )
       let matchsucceeded = <false>
       (repeatWhile (<matchsucceeded> equals <false>) block: [
         (if (<lastindex> > <length>)
@@ -159,7 +168,7 @@ it("regexpbuiltinexec", () => {
       (assert (unknown the mathematical value of a 's "length" property is n + 1))
       (call <createdatapropertyorthrow> <a> (string index) (call <𝔽> <lastindex>))
       (call <createdatapropertyorthrow> <a> (string input) <s>)
-      (unknown Let matchedSubstr be the substring of S from lastIndex to e .)
+      let matchedsubstr = (call <SUBSTRING> <s> <lastindex> <e>)
       (call <createdatapropertyorthrow> <a> (string 0) <matchedsubstr>)
       (unknown If R contains any GroupName , then block: [
         let groups = (call <ordinaryobjectcreate> <null>)

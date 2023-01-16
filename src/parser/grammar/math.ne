@@ -4,7 +4,7 @@
 mathExpr      -> subtractionExpr                            {% id %}
 
 subtractionExpr -> additionExpr                             {% id %}
-subtractionExpr -> subtractionExpr "-" additionExpr         {% ([left, _, right]) => ({
+subtractionExpr -> subtractionExpr ("-" | "–") additionExpr {% ([left, _, right]) => ({
                                                               ast: 'binaryExpr',
                                                               children: ['-', left, right]
                                                             }) %}
@@ -36,3 +36,25 @@ unaryExpr -> "+" atom                                       {% ([min, arg]) => (
                                                               ast: 'unaryExpr',
                                                               children: ['+', arg]
                                                             }) %}
+
+statement ->
+("increase" | "increment") lhs "by" atom                    {% ([_, lhs, __, rhs]) =>
+                                                              n({
+                                                                ast: 'set',
+                                                                children: [lhs, n({
+                                                                  ast: 'binaryExpr',
+                                                                  children: ['+', lhs, rhs]
+                                                                })]
+                                                              })
+                                                            %}
+
+statement ->
+("decrease" | "decrement") lhs "by" atom                    {% ([_, lhs, __, rhs]) =>
+                                                              n({
+                                                                ast: 'set',
+                                                                children: [lhs, n({
+                                                                  ast: 'binaryExpr',
+                                                                  children: ['-', lhs, rhs]
+                                                                })]
+                                                              })
+                                                            %}

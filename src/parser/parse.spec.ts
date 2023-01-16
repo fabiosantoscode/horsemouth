@@ -50,6 +50,24 @@ it("can parse comparisons", () => {
   `);
 });
 
+it("can do contains checks", () => {
+  expect(
+    parseAlgorithmStep(
+      'If n is not an element of exportedNames , then append "ratio" to L .'
+    )
+  ).toMatchInlineSnapshot(`
+    (if (not (call <CONTAINS> <exportednames> <n>))
+      then: (call <PUSH> <l> (string ratio))
+    )
+  `);
+});
+
+it("can do substrings", () => {
+  expect(
+    parseAlgorithmStep("Return the substring of S from from to to .")
+  ).toMatchInlineSnapshot(`(return_ (call <SUBSTRING> <s> <from> <to>))`);
+});
+
 it("can parse symbol refs", () => {
   expect(
     parseAlgorithmStep("Let S be ? Get ( C , @@species ).")
@@ -84,6 +102,31 @@ it("can parse conditions", () => {
       then: (return_ (string (?:)))
     )
   `);
+
+  expect(
+    parseAlgorithmStep(
+      "If numberOfArgs > 2 , let length be args [ 2 ] ; else let length be undefined ."
+    )
+  ).toMatchInlineSnapshot(`
+    (if (<numberofargs> > (number 2))
+      then: let length = <args>.(number 2)
+      else: let length = <undefined>
+    )
+  `);
+});
+
+it("can parse loops", () => {
+  expect(parseAlgorithmStep("For each f of x, do f(x)")).toMatchInlineSnapshot(
+    `(forEach f <x> (call <f> <x>))`
+  );
+
+  expect(parseAlgorithmStep("For each Function f of x, do f(x)")).toMatchInlineSnapshot(
+    `(forEach f <x> (call <f> <x>))`
+  );
+
+  expect(parseAlgorithmStep("For each Record { [[ Key ]] , [[ Value ]] } f of x, do f(x)")).toMatchInlineSnapshot(
+    `(forEach f <x> (call <f> <x>))`
+  );
 });
 
 it("can parse calls", () => {
@@ -105,6 +148,12 @@ it("works with internal slots", () => {
       then: (return_ (number 0))
     )
   `);
+
+  expect(
+    parseAlgorithmStep(
+      "Set the [[ DateValue ]] internal slot of this Date object to v ."
+    )
+  ).toMatchInlineSnapshot(`(set <this>.[[datevalue]] <v>)`);
 });
 
 it("can compare to the empty string", () => {

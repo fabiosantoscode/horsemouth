@@ -39,7 +39,8 @@ const tokens = {
   rBrace: "}",
   lList: "«",
   rList: "»",
-  math: /[+/*\-∞]/u,
+  semicolon: ";",
+  math: /[+/*\-∞–]/u,
   error: moo.error,
 };
 

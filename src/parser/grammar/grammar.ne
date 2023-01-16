@@ -10,6 +10,7 @@
 @include "./records.ne"
 @include "./strings/strings.ne"
 @include "./lists/lists.ne"
+@include "./lists/checks.ne"
 @include "./types.ne"
 @include "./math.ne"
 @include "./booleanExpr.ne"
@@ -22,7 +23,12 @@ root          -> statement                      {% id %}
 
 # GETTING CONTEXT
 
-expr          -> "the":? "this" "value"         {% () => ({
+ref           -> "the":? "this" "value"         {% () => ({
+                                                  ast: 'reference',
+                                                  children: ['this']
+                                                }) %}
+
+ref           -> "this" type ("value" | "object"){% () => ({
                                                   ast: 'reference',
                                                   children: ['this']
                                                 }) %}
