@@ -2,7 +2,7 @@
 @{%
 const reservedWords = new Set(`
   if then else let be is the of
-  and or not TypeError exception
+  and or not exception
   otherwise either while NaN
 `.split(/\n/g).join(' ').split(/\s+/g))
 %}
@@ -89,6 +89,8 @@ atom          -> %wellKnownSymbol               {% ([id]) => ({
 
 atom          -> ("the" "value" "of":?) atom    {% ([redundant, id]) => id %}
 
+atom          -> %lParen expr %rParen           {% ([lparen, expr, rparen]) => expr %}
+
 # CALLS
 ######################################
 atom          -> call                           {% id %}
@@ -106,9 +108,11 @@ callTarget    -> %word ":" ":" %word            {% ([target, _colon, _colon2, ta
                                                   children: [target.text + '::' + target2.text]
                                                 }) %}
 
-call_args     -> "(" expr ("," expr):* ")"      {% ([paren, firstArg, args]) => [
+# %lParenCall is a "(" when followed by something that looked
+# callable to the tokenizer (word, percentage refs, "]]", etc)
+call_args     -> %lParenCall expr ("," expr):* ")"      {% ([paren, firstArg, args]) => [
                                                   n(firstArg),
                                                   ...args.map(a => n(a[1]))
                                                 ] %}
 
-call_args     -> "(" ")"                        {% () => [] %}
+call_args     -> %lParenCall ")"                {% () => [] %}

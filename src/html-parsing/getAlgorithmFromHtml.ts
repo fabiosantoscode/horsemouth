@@ -126,7 +126,10 @@ export const getAlgorithmStepFromHtml = (
         blockReferences.push(childBlock);
         return [getInnerBlockHack(blockReferences.length - 1)];
       }
-      if (child.tagName === "SUP" && child.textContent?.trim().toLocaleLowerCase() !== "th") {
+      if (
+        child.tagName === "SUP" &&
+        child.textContent?.trim().toLocaleLowerCase() !== "th"
+      ) {
         // 2<sup>32</sup> => 2 ** 32
         return [`** ${child.textContent?.trim()}`];
       }

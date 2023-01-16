@@ -46,8 +46,31 @@ const tokens = {
 
 export const getInnerBlockHack = (num: number) => `:::innerblockhack${num}`;
 
-export type TokenType = keyof typeof tokens;
+export type TokenType = (keyof typeof tokens) | 'lParenCall';
 export type TokenOfType<T extends TokenType> = moo.Token & { type: T };
+
 export const algorithmTokenizer = noSpaceTokenizer(
-  moo.compile(tokens)
+  moo.compile(tokens),
+  (token, prevToken) => {
+
+    // Is this an open paren that's a function call?
+    if (
+      token?.type === 'lParen'
+      && (
+        ['rSlotBrackets', 'rSquareBracket', 'percentReference'].includes(prevToken?.type ?? '')
+      || (prevToken?.type === 'word' && !isReservedWord(prevToken.value)))
+    ) {
+      token.type = 'lParenCall'
+    }
+
+    return token
+  }
 ) as HorsemouthLexer;
+
+const reservedWords = new Set(`
+  if then else let be is the of
+  and or not exception return throw modulo
+  otherwise either while
+`.split(/\n/g).join(' ').split(/\s+/g))
+
+const isReservedWord = (word: string) => reservedWords.has(word);
