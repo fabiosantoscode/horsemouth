@@ -4,7 +4,7 @@ import { noSpaceTokenizer } from "../parser-tools/noSpaceTokenizer";
 
 const tokens = {
   word: {
-    match: /[a-zA-Z_$𝔽ℝ][a-zA-Z0-9_$𝔽ℝ]*/u,
+    match: /[a-zA-Z_$ℤ𝔽ℝ][a-zA-Z0-9_$ℤ𝔽ℝ]*/u,
   } as moo.Rule,
   space: {
     match: /[ \n\xa0]+/u,
@@ -40,7 +40,7 @@ const tokens = {
   lList: "«",
   rList: "»",
   semicolon: ";",
-  math: /[+/*\-∞–]/u,
+  math: /[+/*\-∞–×]/u,
   error: moo.error,
 };
 

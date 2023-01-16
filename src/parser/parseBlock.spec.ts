@@ -163,7 +163,7 @@ it("regexpbuiltinexec", () => {
         ]
       )
       (unknown Let n be the number of elements in r 's captures List . (This is the same value as 22.2.2.1 's NcapturingParens .))
-      (assert (unknown n < 2 32 - 1))
+      (assert (<n> < (((number 2) ** (number 32)) - (number 1))))
       let a = (call <arraycreate> (<n> + (number 1)))
       (assert (unknown the mathematical value of a 's "length" property is n + 1))
       (call <createdatapropertyorthrow> <a> (string index) (call <𝔽> <lastindex>))

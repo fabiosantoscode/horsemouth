@@ -126,6 +126,10 @@ export const getAlgorithmStepFromHtml = (
         blockReferences.push(childBlock);
         return [getInnerBlockHack(blockReferences.length - 1)];
       }
+      if (child.tagName === "SUP" && child.textContent?.trim().toLocaleLowerCase() !== "th") {
+        // 2<sup>32</sup> => 2 ** 32
+        return [`** ${child.textContent?.trim()}`];
+      }
       if (child.tagName === "EMU-XREF" && child.getAttribute("aoid")) {
         return [cleanIdentifier(child.getAttribute("aoid") || "")];
       } else {

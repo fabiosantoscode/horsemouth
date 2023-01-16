@@ -307,6 +307,7 @@ const operators = {
   ">": ">",
   "<=": "<=",
   ">=": ">=",
+  "**": "**",
 };
 
 const operator = (op: string): string => {

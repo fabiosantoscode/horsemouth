@@ -33,25 +33,6 @@ ref           -> "this" type ("value" | "object"){% () => ({
                                                   children: ['this']
                                                 }) %}
 
-# TYPE CHECKS
-######################################
-
-expr          -> typeCheck                      {% id %}
-typeCheck     -> "the" expr ("that" "is") expr  {% ([the_, type, thatIs_, expr]) => ({
-                                                  ast: 'typeCheck',
-                                                  children: [type, expr]
-                                                }) %}
-
-typeCheck     -> "the" typee ref                {% ([the_, type, expr]) => ({
-                                                  ast: 'typeCheck',
-                                                  children: [type, expr]
-                                                }) %}
-
-typee          -> "list"                         {% () => ({
-                                                  ast: 'reference',
-                                                  children: ['list']
-                                                }) %}
-
 # INNER BLOCKS
 ######################################
 

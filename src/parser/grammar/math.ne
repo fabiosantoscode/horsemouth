@@ -9,11 +9,18 @@ subtractionExpr -> subtractionExpr ("-" | "–") additionExpr {% ([left, _, righ
                                                               children: ['-', left, right]
                                                             }) %}
 
-additionExpr -> divisionExpr                                {% id %}
-additionExpr -> additionExpr "+" divisionExpr               {% ([left, _, right]) => ({
+additionExpr -> moduloExpr                                  {% id %}
+additionExpr -> additionExpr "+" moduloExpr                 {% ([left, _, right]) => ({
                                                               ast: 'binaryExpr',
                                                               children: ['+', left, right]
                                                             }) %}
+
+moduloExpr   -> divisionExpr                                {% id %}
+moduloExpr   -> moduloExpr "modulo" divisionExpr            {% ([left, _, right]) => n({
+                                                              ast: 'binaryExpr',
+                                                              children: ['%', left, right]
+                                                            }) %}
+
 
 divisionExpr -> multiplicationExpr                          {% id %}
 divisionExpr -> divisionExpr "/" multiplicationExpr         {% ([left, _, right]) => ({
@@ -21,10 +28,16 @@ divisionExpr -> divisionExpr "/" multiplicationExpr         {% ([left, _, right]
                                                               children: ['/', left, right]
                                                             }) %}
 
-multiplicationExpr -> unaryExpr                             {% id %}
-multiplicationExpr -> multiplicationExpr "*" unaryExpr      {% ([left, _, right]) => ({
+multiplicationExpr -> powerExpr                             {% id %}
+multiplicationExpr -> multiplicationExpr ("*"|"×") powerExpr{% ([left, _, right]) => ({
                                                               ast: 'binaryExpr',
                                                               children: ['*', left, right]
+                                                            }) %}
+
+powerExpr    -> unaryExpr                                   {% id %}
+powerExpr    -> powerExpr ("*" "*") unaryExpr               {% ([left, _, right]) => n({
+                                                              ast: 'binaryExpr',
+                                                              children: ['**', left, right]
                                                             }) %}
 
 unaryExpr -> atom                                           {% id %}
