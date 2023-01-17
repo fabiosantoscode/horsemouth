@@ -113,6 +113,17 @@ it("can parse conditions", () => {
       else: let length = <undefined>
     )
   `);
+
+  expect(
+    parseAlgorithmStep(
+      "If x and y are the same Object value , return true . Otherwise , return false ."
+    )
+  ).toMatchInlineSnapshot(`
+    (if ((call <HAS_TYPE> <x> (string some record?)) and ((call <HAS_TYPE> <y> (string some record?)) and (<x> equals <y>)))
+      then: (return_ <true>)
+      else: (return_ <false>)
+    )
+  `);
 });
 
 it("can parse loops", () => {
@@ -192,17 +203,23 @@ it("parses string operations", () => {
 
 it("falls back to a shoddy parse", () => {
   expect(
-    parseAlgorithmStep("Assert : potatoes tomatoes UwU unparsable")
+    parseAlgorithmStep("Assert : potatoes tomatoes UwU unparsable", {
+      allowUnknown: true,
+    })
   ).toMatchInlineSnapshot(
     `(assert (unknown potatoes tomatoes uwu unparsable))`
   );
   expect(
-    parseAlgorithmStep("Return potatoes tomatoes UwU unparsable")
+    parseAlgorithmStep("Return potatoes tomatoes UwU unparsable", {
+      allowUnknown: true,
+    })
   ).toMatchInlineSnapshot(
     `(return_ (unknown potatoes tomatoes uwu unparsable))`
   );
   expect(
-    parseAlgorithmStep("Throw potatoes tomatoes UwU unparsable")
+    parseAlgorithmStep("Throw potatoes tomatoes UwU unparsable", {
+      allowUnknown: true,
+    })
   ).toMatchInlineSnapshot(
     `(throw_ (unknown potatoes tomatoes uwu unparsable))`
   );

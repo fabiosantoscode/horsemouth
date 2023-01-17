@@ -39,3 +39,18 @@ atom         -> ("the" "substring" "of") atom "from" atom "to" atom
                                                       ]
                                                     })
                                                   } %}
+
+mathExpr     -> ("the" "code" "unit" "at" "index") mathExpr "within" atom
+                                                  {% ([_codeUnitAt, index, _within, str]) => {
+                                                    return n({
+                                                      ast: 'call',
+                                                      children: [
+                                                        n({
+                                                          ast: 'reference',
+                                                          children: ['CODE_UNIT_AT']
+                                                        }),
+                                                        str,
+                                                        index
+                                                      ]
+                                                    })
+                                                  } %}

@@ -79,7 +79,7 @@ it("Weakset has", () => {
     block: [
       let s = <this>
       (call <requireinternalslot> <s> [[weaksetdata]])
-      let entries = (typeCheck <list> <s>.[[weaksetdata]])
+      let entries = (typeCheck (string some record?) <s>.[[weaksetdata]])
       (if (not ((call <type> <value>) equals <object>))
         then: (return_ <false>)
       )
@@ -145,7 +145,7 @@ it("regexpbuiltinexec", () => {
             (set <lastindex> (call <advancestringindex> <s> <lastindex> <fullunicode>))
           ]
           else: block: [
-            (assert (unknown r is a state))
+            (assert (call <HAS_TYPE> <r> (string some record?)))
             (set <matchsucceeded> <true>)
           ]
         )

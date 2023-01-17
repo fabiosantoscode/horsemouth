@@ -1,15 +1,22 @@
 
 atom       -> ("a" "new" | "the"):? newRecord     {% ([a_, r]) => r %}
 
-newRecord  -> rHead "{" rFieldList "}"            {% ([rHead_, brace_, rFieldList ]) => n({
+newRecord  -> recordType "{" rFieldList "}"       {% ([rHead_, brace_, rFieldList ]) => n({
                                                     ast: 'record',
                                                     children: [...rFieldList]
                                                   })%}
 
-rHead      -> (ref:? "record")
+recordType-> (ref:? "record")
           | ("property" "descriptor")
           | "propertydescriptor"
+          | ("cyclic" | "source" "text")
           | "completion"                          {%id%}
+
+recordTypeNotRef -> recordType                    {% ([rType], _, reject) => {
+                                                    if (rType.text === 'ref') {
+                                                      reject()
+                                                    }
+                                                  } %}
 
 rFieldList -> rFieldList "," rField               {% ([fList, comma_, field]) =>
                                                     [...fList, field] %}

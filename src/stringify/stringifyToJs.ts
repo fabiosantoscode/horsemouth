@@ -1,6 +1,6 @@
 import prettier from "prettier";
 import { walk } from "../parser-tools/walk";
-import { AlgorithmBlock, AlgorithmNode } from "../parser/ast";
+import { AlgorithmBlock, AlgorithmNode, NodeOfType } from "../parser/ast";
 import { getNodeSource } from "../parser/parse";
 import { cleanIdentifier } from "../utils/cleanIdentifier";
 import { findWellKnownIntrinsics } from "../wellKnown/findWellKnownIntrinsics";
@@ -232,7 +232,7 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
     }
     case "forEach": {
       const [item, list, body] = node.children;
-      return `for (const ${item} of ${s(list)}) {
+      return `for (const ${cleanIdentifier(item)} of ${s(list)}) {
         ${s(body)}
     }`;
     }
@@ -243,6 +243,9 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
       return `throw ${s(node.children[0])};`;
     }
     case "assert": {
+      if (node.children[0].ast === 'unknown') {
+        return `UNKNOWN_ASSERT(${unknownChildren(node.children[0])});`;
+      }
       return `ASSERT(${s(node.children[0])});`;
     }
     case "block": {
@@ -266,18 +269,7 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
     // Else is here because we couldn't join it with the previous if
     // Usually this means the previous if was parsed as "unknown"
     case "unknown": {
-      return (
-        "UNKNOWN(" +
-        node.children
-          .flatMap((child) => {
-            if (typeof child === "string") return JSON.stringify(child);
-            if (Array.isArray(child))
-              return `(() => { ${child.map(s).join("; ")} })()`;
-            return `(() => { ${s(child)} })()`;
-          })
-          .join(", ") +
-        ")"
-      );
+      return `UNKNOWN( ${unknownChildren(node)} )`;
     }
     case "comment": {
       return `/* ${node.children[0].replaceAll(/\*\//g, "*\\/")} */`;
@@ -290,6 +282,20 @@ function stringifyAlgorithmNodeRaw(node: AlgorithmNode): string {
         `stringifyToJs: Unknown node type ${node && (node as any).ast}`
       );
     }
+  }
+
+  function unknownChildren(unknown: NodeOfType<'unknown'> | NodeOfType<'else'>) {
+    return unknown.children
+      .flatMap((child) => {
+        if (typeof child === "string") {
+          return JSON.stringify(child);
+        }else if (Array.isArray(child)){
+          return `(() => { ${child.map(s).join("; ")} })()`;
+        } else {
+          return `(() => { ${s(child)} })()`;
+        }
+      })
+      .join(", ")
   }
 }
 

@@ -32,6 +32,10 @@ numericLiteral-> %number                        {% ([id]) => ({
                                                   ast: 'number',
                                                   children: [id.text]
                                                 }) %}
+numericLiteral-> %hexNumber                     {% ([id]) => ({
+                                                  ast: 'number',
+                                                  children: [id.value]
+                                                }) %}
 numericLiteral-> "∞"                            {% id => ({
                                                   ast: 'number',
                                                   children: ["Infinity"]
@@ -40,7 +44,7 @@ numericLiteral-> "NaN"                          {% id => ({
                                                   ast: 'number',
                                                   children: ["NaN"]
                                                 }) %}
-numericLiteral-> ("the" | "an") "empty" "string" {% ([]) => ({
+literal       -> ("the" | "an") "empty" "string"{% ([]) => ({
                                                   ast: 'string',
                                                   children: ['']
                                                 }) %}
@@ -100,7 +104,8 @@ call          -> callStart callTarget call_args {% ([_drop, id, callArgs]) => ({
                                                 }) %}
 
 # drop stopwords
-callStart     -> "perform":? ("!" | "?"):?      {% id %}
+callStart     -> ("perform" | "call"):? ("!" | "?"):?
+                                                {% id %}
 
 callTarget    -> lhs                            {% id %}
 callTarget    -> %word ":" ":" %word            {% ([target, _colon, _colon2, target2]) => n({

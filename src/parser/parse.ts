@@ -39,7 +39,7 @@ export function parseAlgorithmStep(
     return parseAlgorithmBlock(block, opts);
   };
 
-  const [parseError, parsed] = justParse(sourceText.toLocaleLowerCase());
+  const [parseError, parsed] = justParse(sourceText.toLocaleLowerCase(), opts.allowUnknown);
 
   let returnedAst: AlgorithmNode;
 
@@ -109,13 +109,16 @@ export const getNodeSource = (node: AlgorithmNode) => nodeSources.get(node);
 
 /** plainly parse with our grammar and understand the error (if any) */
 const justParse = (
-  source = ""
+  source = "",
+  allowUnknown = false
 ):
   | ["parseError", Error]
   | ["ambiguityError", AlgorithmNode[]]
   | ["ok", AlgorithmNode] => {
   const parser = new Parser(Grammar, { lexer: algorithmTokenizer });
   const tryShoddy = () => {
+    if (!allowUnknown) return undefined
+
     const shoddy = shoddyParse(source);
     return shoddy && (["ok", shoddy] as ["ok", AlgorithmNode]);
   };

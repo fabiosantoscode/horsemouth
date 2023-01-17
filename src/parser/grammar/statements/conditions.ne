@@ -12,7 +12,8 @@ statement    -> "if" expr then_ statement maybe_else_after
                                                 ]
                                               }) %}
 
-maybe_else_after -> (";" else_ statement):?   {% ([else_]) => else_ ? [n({
+maybe_else_after -> ((";" | ".") else_ statement):?
+                                              {% ([else_]) => else_ ? [n({
                                                 ast: 'else',
                                                 children: [n(else_[2])]
                                               })] : [] %}

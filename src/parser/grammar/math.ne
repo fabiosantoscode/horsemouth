@@ -3,6 +3,18 @@
 
 mathExpr      -> subtractionExpr                            {% id %}
 
+mathExpr      -> ("the" "numeric" "value" "of") subtractionExpr {% ([theNumericValueOf_, expr]) => n({
+                                                              ast: 'call',
+                                                              children: [
+                                                                n({
+                                                                  ast: 'reference',
+                                                                  children: ['TO_NUMBER'],
+                                                                }),
+                                                                expr
+                                                              ]
+                                                            }) %}
+
+
 subtractionExpr -> additionExpr                             {% id %}
 subtractionExpr -> subtractionExpr ("-" | "–") additionExpr {% ([left, _, right]) => ({
                                                               ast: 'binaryExpr',
@@ -69,5 +81,20 @@ statement ->
                                                                   ast: 'binaryExpr',
                                                                   children: ['-', lhs, rhs]
                                                                 })]
+                                                              })
+                                                            %}
+
+expr      -> ("the" "result" "of" "clamping") atom "between" mathExpr "and" mathExpr
+                                                            {% ([_, lhs, btwn_, min, and_, max]) => n({
+                                                                ast: 'call',
+                                                                children: [
+                                                                  n({
+                                                                    ast: 'reference',
+                                                                    children: ['CLAMP'],
+                                                                  }),
+                                                                  n(lhs),
+                                                                  n(min),
+                                                                  n(max),
+                                                                ]
                                                               })
                                                             %}

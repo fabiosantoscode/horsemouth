@@ -31,12 +31,27 @@ comparisonExpr -> comparisonExpr ("is" | "=" | "is" "the" "same" "as") mathExpr
                                                     compare(expr1, expr2)
                                                   %}
 
-comparisonExpr -> comparisonExpr "is" "not" mathExpr
-                                                  {% ([expr1, is, not, expr2]) =>
+comparisonExpr -> comparisonExpr ("is" "not" | "≠") mathExpr
+                                                  {% ([expr1, isnt_, expr2]) =>
                                                     boolNot({
                                                       ast: 'binaryExpr',
                                                       children: ['equals', expr1, expr2]
                                                     })
+                                                  %}
+
+comparisonExpr -> comparisonExpr "and" comparisonExpr ("are" "both":?) atom
+                                                  {% ([expr1, and_, expr2, are_, expr3]) =>
+                                                    chainedBinaryOp(
+                                                      'and',
+                                                      {
+                                                        ast: 'binaryExpr',
+                                                        children: ['equals', expr1, expr3]
+                                                      },
+                                                      {
+                                                        ast: 'binaryExpr',
+                                                        children: ['equals', expr2, expr3]
+                                                      }
+                                                    )
                                                   %}
 
 comparisonExpr -> comparisonExpr "is" "either" mathExpr "or" mathExpr
@@ -83,6 +98,8 @@ comparisonExpr -> comparisonExpr "is" "neither" mathExpr "nor" mathExpr
                                                       ]
                                                     })
                                                   %}
+
+comparisonExpr -> typeComparisonExpr              {% id %}
 
 comparisonExpr -> comparisonExpr "has" ("a" | "an") slotRef
    ("internal":? ("slot" | "field" | "method"))
